@@ -24,6 +24,32 @@ public class ChargeBean {
 	private Date endDate=new Date();
 	private Double startCharge=0.0;
 	private Double endCharger=0.0;
+	private Double startSOC=0.0;
+	/**
+	* @return startSOC
+	*/
+	public Double getStartSOC() {
+		return startSOC;
+	}
+	/**
+	* @param startSOC 要设置的 startSOC
+	*/
+	public void setStartSOC(Double startSOC) {
+		this.startSOC = startSOC;
+	}
+	/**
+	* @return endSOC
+	*/
+	public Double getEndSOC() {
+		return endSOC;
+	}
+	/**
+	* @param endSOC 要设置的 endSOC
+	*/
+	public void setEndSOC(Double endSOC) {
+		this.endSOC = endSOC;
+	}
+	private Double endSOC=0.0;
 	/**
 	* @return startDate
 	*/
@@ -75,19 +101,6 @@ public class ChargeBean {
 	public void setEndCharger(Double endCharger) {
 		this.endCharger = endCharger;
 	}
-	
-	/**
-	* @Title: getCharger
-	* @Description: TODO获取当次充电量
-	* @param @return    设定文件
-	* @return Double    返回类型
-	* @throws
-	*/ 
-	public Double getCharger()
-	{
-		
-		return endCharger-startCharge;
-	}
-	
+
 
 }

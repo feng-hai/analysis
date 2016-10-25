@@ -107,7 +107,7 @@ public class TridentKafkaTopologyForCharge {
 //		}
 
 		System.out.println("Using Kafka zookeeper url: " + zkUrl + " broker url: " + brokerUrl);
-		TridentKafkaSpoutForCharge kafkaInstance = new TridentKafkaSpoutForCharge(zkUrl, brokerUrl, "test");
+		TridentKafkaSpoutForCharge kafkaInstance = new TridentKafkaSpoutForCharge(zkUrl, brokerUrl, "pairs_up");
 		if (args.length == 1) {
 			Config conf = new Config();
 			conf.setMaxSpoutPending(20);
@@ -139,9 +139,9 @@ public class TridentKafkaTopologyForCharge {
 				Thread.sleep(1000);
 			}
 
-			cluster.killTopology("kafkaBolt");
-			cluster.killTopology("wordCounter");
-			cluster.shutdown();
+//			cluster.killTopology("kafkaBolt");
+//			cluster.killTopology("wordCounter");
+//			cluster.shutdown();
 		}
 	}
 }

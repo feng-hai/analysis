@@ -9,6 +9,7 @@
 package com.wlwl.cube.ananlyse.functions;
 
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -21,18 +22,12 @@ import org.apache.storm.trident.operation.TridentCollector;
 import org.apache.storm.trident.operation.TridentOperationContext;
 import org.apache.storm.trident.tuple.TridentTuple;
 import org.apache.storm.tuple.Values;
-
 import com.wlwl.cube.analyse.bean.ObjectModelOfKafka;
-import com.wlwl.cube.analyse.bean.Pair;
 import com.wlwl.cube.analyse.bean.VehicleStatisticBean;
-import com.wlwl.cube.analyse.bean.VehicleStatusBean;
 import com.wlwl.cube.analyse.common.Conf;
-import com.wlwl.cube.ananlyse.state.JsonUtils;
 import com.wlwl.cube.ananlyse.state.StateUntils;
 import com.wlwl.cube.ananlyse.state.TimeBaseRowStrategy;
 import com.wlwl.cube.hbase.HBaseUtils;
-import com.wlwl.cube.redis.RedisSingleton;
-import com.wlwl.cube.redis.RedisUtils;
 import com.wlwl.cube.mysql.JdbcUtils;
 import com.wlwl.cube.mysql.SingletonJDBC;
 
@@ -85,6 +80,8 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 		vehicle.setVehicle_unid(device);
 		
 		vehicle.setStatisticDateTime(omok.getTIMESTAMP());
+		
+		vehicle.setWorkTimeDateTime_end(omok.getTIMESTAMP());
 		
 		collector.emit(new Values(vehicle));
 		
@@ -149,11 +146,11 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 	 */
 	private void insertDataForAlarm(VehicleStatisticBean vehicle) {
 		
-		String sql = "SELECT count(*) alarmCount FROM sensor.ANA_VEHICLE_EVENT where unid=?  DATIME_BEGIN between  STR_TO_DATE(?,\"%Y-%m-%d %H:%i:%s\") and  STR_TO_DATE(?,\"%Y-%m-%d %H:%i:%s\")";
+		String sql = "SELECT count(*) alarmCount FROM sensor.ANA_VEHICLE_EVENT where entity_unid=?  and  DATIME_BEGIN between  STR_TO_DATE(?,\"%Y-%m-%d %H:%i:%s\") and  STR_TO_DATE(?,\"%Y-%m-%d %H:%i:%s\")";
 		List<Object> params = new ArrayList<Object>();
 		params.add(vehicle.getVehicle_unid());
-		params.add(StateUntils.formateDay(vehicle.getStatisticDateTime()) + " 00:00:00");
-		params.add(StateUntils.formateDay(vehicle.getStatisticDateTime()) + " 23:59:59");
+		params.add(new SimpleDateFormat("yyyy-MM-dd").format(vehicle.getStatisticDateTime()) + " 00:00:00");
+		params.add(new SimpleDateFormat("yyyy-MM-dd").format(vehicle.getStatisticDateTime()) + " 23:59:59");
 		Map<String, Object> list = null;
 		try {
 			list = jdbcUtils.findSimpleResult(sql, params);

@@ -173,6 +173,42 @@ public class ObjectModelOfKafka implements Serializable {
 		}
 		return new Pair();
 	}
+	
+	
+	/**
+	* @Title: getInCharge
+	* @Description: 总充电量
+	* @param @return    设定文件
+	* @return Pair    返回类型
+	* @throws
+	*/ 
+	public Pair getInCharge()
+	{
+		for (Pair p : pairs) {
+			if (p.getAlias() .equals("POWER_CHARING_TOTAL")) {
+				return p;
+			}
+		}
+		return new Pair();	
+    }
+	
+	/**
+	* @Title: getSOC
+	* @Description: 车辆SOC
+	* @param @return    设定文件
+	* @return Pair    返回类型
+	* @throws
+	*/ 
+	public Pair getSOC()
+	{
+		for (Pair p : pairs) {
+			if (p.getAlias() .equals("SOC")) {
+				return p;
+			}
+		}
+		return new Pair();	
+		
+	}
 
 	/**
 	 * @Title: getChargeStatus @Description: TODO充电状态 @param @return

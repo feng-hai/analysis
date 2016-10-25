@@ -34,5 +34,13 @@ public class TimeBaseRowStrategy implements Serializable {
 	public static String getRowKeyForHase(VehicleStatisticBean vehicle) {
 		return StateUntils.formateDay(vehicle.getWorkTimeDateTime_end()) + "-" + vehicle.getVehicle_unid();
 	}
+	
+	/**
+	 * @Title: getRowKeyForRedis @Description: TODO组装rediskey @param @param
+	 *         unid @param @return 设定文件 @return String 返回类型 @throws
+	 */
+	public static String getRowKeyFor2Hase(VehicleStatisticBean vehicle) {
+		return Long.toString(vehicle.getWorkTimeDateTime_end().getTime()) + "-" + vehicle.getVehicle_unid();
+	}
 
 }

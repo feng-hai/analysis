@@ -129,8 +129,8 @@ public class SaveValueToRedisFunction extends BaseFunction {
 
 				if (totalMile != null && Double.parseDouble(totalMile.getValue()) > 0
 						&& Double.parseDouble(totalMile.getValue()) - vehicle.getWorkMile_start() >= 0) {
-					// 里程 最大值保存
-					if (Double.parseDouble(totalMile.getValue()) > vehicle.getWorkMile_end()) {
+					// 里程 最大值保存   过滤不正确的里程值
+					if (Double.parseDouble(totalMile.getValue()) > vehicle.getWorkMile_end()&&Double.parseDouble(totalMile.getValue()) - vehicle.getWorkMile_end()<500) {
 						
 						vehicle.setWorkMile_end(Double.parseDouble(totalMile.getValue()));
 						if(vehicle.getWorkMile_start()==0)
@@ -144,7 +144,7 @@ public class SaveValueToRedisFunction extends BaseFunction {
 						vehicle.setWorkMile_start(Double.parseDouble(totalMile.getValue()));
 					}
 					
-					if (vehicle.getWorkMile_end() - vehicle.getWorkMile_start() > 0) {
+					if (vehicle.getWorkMile_end() - vehicle.getWorkMile_start() > 0&&vehicle.getWorkMile_end() - vehicle.getWorkMile_start()<500) {
 						// 更新当日累计里程
 						vehicle.setWorkMileCount(vehicle.getWorkMile_end() - vehicle.getWorkMile_start());
 					}

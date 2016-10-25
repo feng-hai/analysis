@@ -225,39 +225,39 @@ public class VehicleChargeFunction extends BaseFunction {
 					HBaseUtils.createTable(tableName_Charge, family_charge);
 				}
 				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyForHase(vehicleObj) + cbean.getStartDate().getTime(),
+						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
 						family_charge, "startDate", StateUntils.formate(cbean.getStartDate()));
 
 				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyForHase(vehicleObj) + cbean.getStartDate().getTime(),
+						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
 						family_charge, "endDate", StateUntils.formate(cbean.getEndDate()));
 
 				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyForHase(vehicleObj) + cbean.getStartDate().getTime(),
+						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
 						family_charge, "startCharge", cbean.getStartCharge().toString());
 
 				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyForHase(vehicleObj) + cbean.getStartDate().getTime(),
+						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
 						family_charge, "endCharge", cbean.getEndCharger().toString());
 
 				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyForHase(vehicleObj) + cbean.getStartDate().getTime(),
+						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
 						family_charge, "Charge", Double.toString(cbean.getEndCharger() - cbean.getStartCharge()));
 
 				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyForHase(vehicleObj) + cbean.getStartDate().getTime(),
+						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
 						family_charge, "startSOC", cbean.getStartSOC().toString());
 				HBaseUtils.insert(tableName_Charge,
 
-						TimeBaseRowStrategy.getRowKeyForHase(vehicleObj) + cbean.getStartDate().getTime(),
+						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
 						family_charge, "endSOC", cbean.getEndSOC().toString());
 
 				String chargeQuantity = null;
 				String chargeNumber = null;
 				try {
-					chargeQuantity = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj),
+					chargeQuantity = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
 							family, CHARGERQUANTITY);
-					chargeNumber = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj), family,
+					chargeNumber = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family,
 							CHARGECOUNT);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -269,18 +269,18 @@ public class VehicleChargeFunction extends BaseFunction {
 
 					Double qNub = Double.parseDouble(chargeQuantity) + cbean.getEndCharger() - cbean.getStartCharge();
 
-					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj), family, CHARGECOUNT,
+					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family, CHARGECOUNT,
 							Integer.toString(num));
 
-					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj), family,
+					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family,
 							CHARGERQUANTITY, Double.toString(qNub));
 
 				} else {
 
-					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj), family, CHARGECOUNT,
+					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family, CHARGECOUNT,
 							Integer.toString(1));
 
-					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj), family,
+					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family,
 							CHARGERQUANTITY, Double.toString(cbean.getEndCharger() - cbean.getStartCharge()));
 
 				}

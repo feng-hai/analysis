@@ -59,6 +59,11 @@ public class VehicleStatusFunction extends BaseFunction {
 		jdbcUtils = SingletonJDBC.getJDBC();
 	}
 
+	@Override
+	public void cleanup() {
+		
+		
+	}
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -82,9 +87,9 @@ public class VehicleStatusFunction extends BaseFunction {
 			updateCondition(device);
 			// 定时更新在线状态
 			updateNoOnline();
-			
+
 			collector.emit(new Values(omok));
-			
+
 		} catch (Exception e) {
 
 			e.printStackTrace();
@@ -161,7 +166,7 @@ public class VehicleStatusFunction extends BaseFunction {
 				util.hmset(vehicleStatus, map);
 			}
 		}
-		System.out.println(map);
+	
 		Boolean isMatch = false;
 		Iterator<String> it = map.keySet().iterator();
 		while (it.hasNext()) {
@@ -191,9 +196,9 @@ public class VehicleStatusFunction extends BaseFunction {
 		{
 
 			String currentStatus = util.hget(id, Conf.ACTIVE_STATUS);
-			System.out.println(omok.getDATIME_RX());
-			System.out.println(currentStatus);
-			if (currentStatus != null && currentStatus.equals("0")) {
+			//System.out.println(omok.getDATIME_RX());
+			//System.out.println(currentStatus);
+			if (currentStatus ==null ||(currentStatus != null && currentStatus.equals("0"))) {
 				util.hset(id, Conf.ACTIVE_STATUS, "2");
 				util.hset(id, Conf.DATIME_RX, omok.getDATIME_RX());
 			}

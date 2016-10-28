@@ -20,7 +20,7 @@ public class TimeBaseRowStrategy implements Serializable {
 	/**
 	 * @Title: getRowKeyForRedis @Description: 昨天rediskey
 	 * @param @param
-	 * unid @param @return 设定文件 @return String 返回类型 @throws
+	 *            unid @param @return 设定文件 @return String 返回类型 @throws
 	 */
 	public static String getRowKeyForRedisBefore(String time, String unid) {
 		Date date = new Date(StateUntils.strToDate(time).getTime() - 1000 * 60 * 60 * 24);
@@ -34,7 +34,7 @@ public class TimeBaseRowStrategy implements Serializable {
 	public static String getRowKeyForHase(VehicleStatisticBean vehicle) {
 		return StateUntils.formateDay(vehicle.getWorkTimeDateTime_end()) + "-" + vehicle.getVehicle_unid();
 	}
-	
+
 	/**
 	 * @Title: getRowKeyForRedis @Description: TODO组装rediskey @param @param
 	 *         unid @param @return 设定文件 @return String 返回类型 @throws

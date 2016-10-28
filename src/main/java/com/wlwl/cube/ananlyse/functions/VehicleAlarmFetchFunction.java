@@ -69,6 +69,8 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 	 */
 	public void execute(TridentTuple tuple, TridentCollector collector) {
 		
+		try{
+		
 		long currentTime = System.currentTimeMillis();
 		
 		String device = tuple.getStringByField("deviceId"); 
@@ -96,6 +98,11 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 			cleanMap();
 				
 		}	
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		
 		
 	}
 	

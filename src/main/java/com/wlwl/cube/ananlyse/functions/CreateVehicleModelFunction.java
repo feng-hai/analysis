@@ -34,21 +34,23 @@ public class CreateVehicleModelFunction extends BaseFunction {
 	 * @Fields serialVersionUID : TODO(用一句话描述这个变量表示什么)
 	 */
 	private static final long serialVersionUID = -888818998763391563L;
-    private	ObjectModelOfKafka vehicle=null;
+	private ObjectModelOfKafka vehicle = null;
 
 	public void execute(TridentTuple tuple, TridentCollector collector) {
-		String sentence = tuple.getString(0);
+		try {
+			String sentence = tuple.getString(0);
 
-		vehicle = JsonUtils.deserialize(
-				sentence.replace("TIMESTAMP", "timestamp").replaceAll("DATIME_RX", "datime_RX"),
-				ObjectModelOfKafka.class);
+			vehicle = JsonUtils.deserialize(
+					sentence.replace("TIMESTAMP", "timestamp").replaceAll("DATIME_RX", "datime_RX"),
+					ObjectModelOfKafka.class);
 
-		if (vehicle != null) {
-			
-			collector.emit(new Values(vehicle));
+			if (vehicle != null) {
+
+				collector.emit(new Values(vehicle));
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-
 	}
-	
-	
+
 }

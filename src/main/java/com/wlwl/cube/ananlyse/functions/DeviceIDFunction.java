@@ -38,12 +38,17 @@ public class DeviceIDFunction extends BaseFunction {
 	 * org.apache.storm.trident.operation.TridentCollector)
 	 */
 	public void execute(TridentTuple tuple, TridentCollector collector) {
+		try{
 
 		ObjectModelOfKafka vehicleInfo = (ObjectModelOfKafka) tuple.getValueByField("vehicle");
 		Pair pair = vehicleInfo.getVehicle_UNID();
 		if (pair != null) {
 			String device = pair.getValue();
 			collector.emit(new Values(device));
+		}
+		}catch(Exception e)
+		{
+			e.printStackTrace();
 		}
 	}
 

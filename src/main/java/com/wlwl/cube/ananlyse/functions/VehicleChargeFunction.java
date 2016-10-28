@@ -174,44 +174,40 @@ public class VehicleChargeFunction extends BaseFunction {
 		vehicleObj.setWorkTimeDateTime_end(vehicle.getTIMESTAMP());
 
 		if (isCharge(vehicle)) {// 判断是否是充电状态
+			Double chargeNum = 0.0;
 
-			if (vehicle.getInCharge() != null) {
-				// 获取充电量
-				Double chargeNum = Double.parseDouble(vehicle.getInCharge().getValue());
-				ChargeBean cbean;
-				if (chargeNum > 0) {
+			chargeNum = Double.parseDouble(vehicle.getInCharge().getValue());
 
-					String str = util.hget(id, "charges");
+			// 获取充电量
 
-					if (str != null) {
+			ChargeBean cbean;
 
-						cbean = JsonUtils.deserialize(str, ChargeBean.class);
+			String str = util.hget(id, "charges");
 
-						cbean.setEndDate(vehicle.getTIMESTAMP());
+			if (str != null) {
 
-						cbean.setEndSOC(Double.parseDouble(vehicle.getSOC().getValue()));
+				cbean = JsonUtils.deserialize(str, ChargeBean.class);
 
-						cbean.setEndCharger(chargeNum);
+				cbean.setEndDate(vehicle.getTIMESTAMP());
 
-					} else {
+				cbean.setEndSOC(Double.parseDouble(vehicle.getSOC().getValue()));
 
-						cbean = new ChargeBean();
+				cbean.setEndCharger(chargeNum);
 
-						cbean.setStartCharge(chargeNum);
+			} else {
 
-						cbean.setEndCharger(chargeNum);
+				cbean = new ChargeBean();
+				cbean.setStartCharge(chargeNum);
+				cbean.setEndCharger(chargeNum);
+				cbean.setStartDate(vehicle.getTIMESTAMP());
 
-						cbean.setStartDate(vehicle.getTIMESTAMP());
+				cbean.setEndDate(vehicle.getTIMESTAMP());
 
-						cbean.setEndDate(vehicle.getTIMESTAMP());
+				cbean.setStartSOC(Double.parseDouble(vehicle.getSOC().getValue()));
 
-						cbean.setStartSOC(Double.parseDouble(vehicle.getSOC().getValue()));
-
-						cbean.setEndSOC(Double.parseDouble(vehicle.getSOC().getValue()));
-					}
-					util.hset(id, "charges", JsonUtils.serialize(cbean));
-				}
+				cbean.setEndSOC(Double.parseDouble(vehicle.getSOC().getValue()));
 			}
+			util.hset(id, "charges", JsonUtils.serialize(cbean));
 
 		} else {
 
@@ -224,41 +220,35 @@ public class VehicleChargeFunction extends BaseFunction {
 				if (!HBaseUtils.exists(tableName_Charge)) {
 					HBaseUtils.createTable(tableName_Charge, family_charge);
 				}
-				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
-						family_charge, "startDate", StateUntils.formate(cbean.getStartDate()));
+				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
+						"startDate", StateUntils.formate(cbean.getStartDate()));
 
-				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
-						family_charge, "endDate", StateUntils.formate(cbean.getEndDate()));
+				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
+						"endDate", StateUntils.formate(cbean.getEndDate()));
 
-				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
-						family_charge, "startCharge", cbean.getStartCharge().toString());
+				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
+						"startCharge", cbean.getStartCharge().toString());
 
-				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
-						family_charge, "endCharge", cbean.getEndCharger().toString());
+				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
+						"endCharge", cbean.getEndCharger().toString());
 
-				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
-						family_charge, "Charge", Double.toString(cbean.getEndCharger() - cbean.getStartCharge()));
+				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
+						"Charge", Double.toString(cbean.getEndCharger() - cbean.getStartCharge()));
 
-				HBaseUtils.insert(tableName_Charge,
-						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
-						family_charge, "startSOC", cbean.getStartSOC().toString());
+				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
+						"startSOC", cbean.getStartSOC().toString());
 				HBaseUtils.insert(tableName_Charge,
 
-						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj) + cbean.getStartDate().getTime(),
-						family_charge, "endSOC", cbean.getEndSOC().toString());
+						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge, "endSOC",
+						cbean.getEndSOC().toString());
 
 				String chargeQuantity = null;
 				String chargeNumber = null;
 				try {
 					chargeQuantity = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
 							family, CHARGERQUANTITY);
-					chargeNumber = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family,
-							CHARGECOUNT);
+					chargeNumber = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
+							family, CHARGECOUNT);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

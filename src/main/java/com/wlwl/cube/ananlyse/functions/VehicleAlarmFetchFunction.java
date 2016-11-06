@@ -58,7 +58,11 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 		lastTime = System.currentTimeMillis();
 		
 	}
-
+	@Override
+    public void cleanup() {
+		
+		jdbcUtils.releaseConn();
+    }
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -88,6 +92,8 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 		collector.emit(new Values(vehicle));
 		
 		saveMap(vehicle);
+		//System.out.println("计时-开始" + StateUntils.formate(new Date(currentTime)) + "-"
+		//+ StateUntils.formate(new Date(lastTime)));
 		
 		if (currentTime >= lastTime + 1000 * 60 *30) {
 			

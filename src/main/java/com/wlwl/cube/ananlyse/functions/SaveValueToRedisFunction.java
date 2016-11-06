@@ -130,15 +130,16 @@ public class SaveValueToRedisFunction extends BaseFunction {
 				if (totalMile != null && Double.parseDouble(totalMile.getValue()) > 0
 						&& Double.parseDouble(totalMile.getValue()) - vehicle.getWorkMile_start() >= 0) {
 					// 里程 最大值保存   过滤不正确的里程值
-					if (Double.parseDouble(totalMile.getValue()) > vehicle.getWorkMile_end()&&Double.parseDouble(totalMile.getValue()) - vehicle.getWorkMile_end()<500) {
-						
+					if (Double.parseDouble(totalMile.getValue()) > vehicle.getWorkMile_end()) {
 						vehicle.setWorkMile_end(Double.parseDouble(totalMile.getValue()));
+						vehicle.setWorkTotalMile(Double.parseDouble(totalMile.getValue()));
 						if(vehicle.getWorkMile_start()==0)
 						{
 							vehicle.setWorkMile_start(vehicle.getWorkMile_end());
 						}
-						vehicle.setWorkTotalMile(Double.parseDouble(totalMile.getValue()));
 					}
+				
+					
 					// 里程 最小值保存
 					if (Double.parseDouble(totalMile.getValue()) < vehicle.getWorkMile_start()) {
 						vehicle.setWorkMile_start(Double.parseDouble(totalMile.getValue()));

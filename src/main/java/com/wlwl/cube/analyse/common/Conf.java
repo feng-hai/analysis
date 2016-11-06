@@ -83,7 +83,7 @@ public class Conf {
 	/**
 	* @Fields VEHICLE_CONDITION_CHARGE : 车辆充电的判断条件，存储key
 	*/ 
-	public static final String VEHICLE_CONDITION_CHARGE= "VEHICLE_STATUS_STATE:";
+	public static final String VEHICLE_CONDITION_CHARGE= "VEHICLE_CHARGE_STATE:";
 	
 //	/**
 //	* @Fields ZKURL : zookeeper 地址

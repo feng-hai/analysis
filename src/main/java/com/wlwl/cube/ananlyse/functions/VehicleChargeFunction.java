@@ -65,6 +65,7 @@ public class VehicleChargeFunction extends BaseFunction {
 
 	// private Map<String, VehicleStatisticBean> lastCharges = null;
 	// private long lastTime;
+
 	@Override
 	public void prepare(Map conf, TridentOperationContext context) {
 		util = RedisSingleton.instance();
@@ -89,6 +90,7 @@ public class VehicleChargeFunction extends BaseFunction {
 
 			if (omok != null) {
 				checkCharge(omok);
+
 				updateChargeConfig(omok.getVehicle_UNID().getValue());
 			}
 		} catch (Exception e) {
@@ -137,6 +139,8 @@ public class VehicleChargeFunction extends BaseFunction {
 			VehicleStatusBean statusBean = JsonUtils.deserialize(valueStr, VehicleStatusBean.class);
 
 			Pair pair = vehicle.getPairByCode(statusBean.getCODE());
+			
+		
 
 			if (pair != null) {
 
@@ -145,8 +149,12 @@ public class VehicleChargeFunction extends BaseFunction {
 				if (value != null && value != "") {
 
 					Boolean isTrue = statusBean.checkStatus(value);
-
-					return isTrue;
+					if (isTrue) {
+						System.out.println("充电状态");
+						System.out.println(JsonUtils.serialize(pair));
+						System.out.println(JsonUtils.serialize(vehicle));
+						return isTrue;
+					}
 
 				}
 			}
@@ -165,17 +173,21 @@ public class VehicleChargeFunction extends BaseFunction {
 	 */
 	private void checkCharge(ObjectModelOfKafka vehicle) {
 
-		String id = PERFIX + vehicle.getVehicle_UNID().getValue() + StateUntils.formateDay(vehicle.getTIMESTAMP());
-
 		VehicleStatisticBean vehicleObj = new VehicleStatisticBean();
 
 		vehicleObj.setVehicle_unid(vehicle.getVehicle_UNID().getValue());
 
+		// 保存到hbase中时间值
 		vehicleObj.setWorkTimeDateTime_end(vehicle.getTIMESTAMP());
+
+		// redis 中保存充电状态的key
+		String id = PERFIX + vehicle.getVehicle_UNID().getValue() + "charge";
 
 		if (isCharge(vehicle)) {// 判断是否是充电状态
 			Double chargeNum = 0.0;
 
+			util.set(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id, Long.toString(System.currentTimeMillis()));
+			// lastTime = System.currentTimeMillis();
 			chargeNum = Double.parseDouble(vehicle.getInCharge().getValue());
 
 			// 获取充电量
@@ -185,20 +197,29 @@ public class VehicleChargeFunction extends BaseFunction {
 			String str = util.hget(id, "charges");
 
 			if (str != null) {
-
+				//System.out.println(id + "继续充电" + StateUntils.formate(new Date()) + str);
 				cbean = JsonUtils.deserialize(str, ChargeBean.class);
-
 				cbean.setEndDate(vehicle.getTIMESTAMP());
+				if (Double.parseDouble(vehicle.getSOC().getValue()) > 0) {
+					cbean.setEndSOC(Double.parseDouble(vehicle.getSOC().getValue()));
 
-				cbean.setEndSOC(Double.parseDouble(vehicle.getSOC().getValue()));
+					if (cbean.getStartCharge() <= 0) {
+						cbean.setStartCharge(cbean.getEndCharger());
+					}
+				}
 
 				cbean.setEndCharger(chargeNum);
 
 			} else {
 
+				System.out.println(id + "开始充电" + StateUntils.formate(new Date()) + str);
+
 				cbean = new ChargeBean();
+
 				cbean.setStartCharge(chargeNum);
+
 				cbean.setEndCharger(chargeNum);
+
 				cbean.setStartDate(vehicle.getTIMESTAMP());
 
 				cbean.setEndDate(vehicle.getTIMESTAMP());
@@ -206,16 +227,8 @@ public class VehicleChargeFunction extends BaseFunction {
 				cbean.setStartSOC(Double.parseDouble(vehicle.getSOC().getValue()));
 
 				cbean.setEndSOC(Double.parseDouble(vehicle.getSOC().getValue()));
-			}
-			util.hset(id, "charges", JsonUtils.serialize(cbean));
 
-		} else {
-
-			String str = util.hget(id, "charges");
-
-			if (str != null) {
-
-				ChargeBean cbean = JsonUtils.deserialize(str, ChargeBean.class);
+				vehicleObj.setWorkTimeDateTime_end(cbean.getStartDate());// 设置key值
 
 				if (!HBaseUtils.exists(tableName_Charge)) {
 					HBaseUtils.createTable(tableName_Charge, family_charge);
@@ -224,57 +237,101 @@ public class VehicleChargeFunction extends BaseFunction {
 						"startDate", StateUntils.formate(cbean.getStartDate()));
 
 				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
-						"endDate", StateUntils.formate(cbean.getEndDate()));
-
-				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
 						"startCharge", cbean.getStartCharge().toString());
 
 				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
-						"endCharge", cbean.getEndCharger().toString());
-
-				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
-						"Charge", Double.toString(cbean.getEndCharger() - cbean.getStartCharge()));
-
-				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
 						"startSOC", cbean.getStartSOC().toString());
-				HBaseUtils.insert(tableName_Charge,
 
-						TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge, "endSOC",
-						cbean.getEndSOC().toString());
+			}
+			util.hset(id, "charges", JsonUtils.serialize(cbean));
 
-				String chargeQuantity = null;
-				String chargeNumber = null;
-				try {
-					chargeQuantity = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
-							family, CHARGERQUANTITY);
-					chargeNumber = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
-							family, CHARGECOUNT);
-				} catch (Exception e) {
-					e.printStackTrace();
+		} else {
+
+			String str = util.hget(id, "charges");
+
+			String time = util.get(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id);
+			if (time == null) {
+				return;
+			}
+			Long lastTime = Long.parseLong(time);
+			Long currentTime = System.currentTimeMillis();
+//			if (str != null) {
+//				System.out.println(id + "结束充电-开始" + StateUntils.formate(new Date(currentTime)) + "-"
+//						+ StateUntils.formate(new Date(lastTime)));
+//			}
+			if (currentTime - lastTime > 1000 * 60 * 10) {
+				System.out.println(id + "结束充电-结束" + StateUntils.formate(new Date()) + str);
+				util.del(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id);
+
+				// String str = util.hget(id, "charges");
+
+				if (str != null) {
+
+					ChargeBean cbean = JsonUtils.deserialize(str, ChargeBean.class);
+
+					vehicleObj.setWorkTimeDateTime_end(cbean.getStartDate());// 设置key值
+
+					if (!HBaseUtils.exists(tableName_Charge)) {
+						HBaseUtils.createTable(tableName_Charge, family_charge);
+					}
+					HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
+							family_charge, "startDate", StateUntils.formate(cbean.getStartDate()));
+
+					HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
+							family_charge, "endDate", StateUntils.formate(cbean.getEndDate()));
+
+					HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
+							family_charge, "startCharge", cbean.getStartCharge().toString());
+
+					HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
+							family_charge, "endCharge", cbean.getEndCharger().toString());
+
+					HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
+							family_charge, "Charge", Double.toString(cbean.getEndCharger() - cbean.getStartCharge()));
+
+					HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
+							family_charge, "startSOC", cbean.getStartSOC().toString());
+					HBaseUtils.insert(tableName_Charge,
+
+							TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge, "endSOC",
+							cbean.getEndSOC().toString());
+
+					String chargeQuantity = null;
+					String chargeNumber = null;
+					try {
+						
+						chargeQuantity = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj),
+								family, CHARGERQUANTITY);
+						chargeNumber = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj),
+								family, CHARGECOUNT);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+					if (chargeNumber != null) {
+
+						int num = (Integer.parseInt(chargeNumber) + 1);
+
+						Double qNub = Double.parseDouble(chargeQuantity) + cbean.getEndCharger()
+								- cbean.getStartCharge();
+
+						HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj), family,
+								CHARGECOUNT, Integer.toString(num));
+
+						HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj), family,
+								CHARGERQUANTITY, Double.toString(qNub));
+
+					} else {
+
+						HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj), family,
+								CHARGECOUNT, Integer.toString(1));
+
+						HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj), family,
+								CHARGERQUANTITY, Double.toString(cbean.getEndCharger() - cbean.getStartCharge()));
+
+					}
+					util.hdel(id, "charges");
 				}
-
-				if (chargeNumber != null) {
-
-					int num = (Integer.parseInt(chargeNumber) + 1);
-
-					Double qNub = Double.parseDouble(chargeQuantity) + cbean.getEndCharger() - cbean.getStartCharge();
-
-					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family, CHARGECOUNT,
-							Integer.toString(num));
-
-					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family,
-							CHARGERQUANTITY, Double.toString(qNub));
-
-				} else {
-
-					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family, CHARGECOUNT,
-							Integer.toString(1));
-
-					HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family,
-							CHARGERQUANTITY, Double.toString(cbean.getEndCharger() - cbean.getStartCharge()));
-
-				}
-				util.hdel(id, "charges");
 			}
 
 		}
@@ -306,6 +363,7 @@ public class VehicleChargeFunction extends BaseFunction {
 					String vehicleStatus = Conf.VEHICLE_CONDITION_CHARGE + device;
 
 					Map<String, String> map = setRedis(device);
+					System.out.println(map);
 
 					if (map.size() > 0) {
 
@@ -330,8 +388,11 @@ public class VehicleChargeFunction extends BaseFunction {
 	}
 
 	/**
-	 * @return @Title: setRedis @Description: TODO(这里用一句话描述这个方法的作用) @param
-	 *         设定文件 @return void 返回类型 @throws
+	 * @return
+	 * @Title: setRedis
+	 * @Description: TODO(这里用一句话描述这个方法的作用)
+	 * @param 设定文件
+	 * 			@return void 返回类型 @throws
 	 */
 	private Map<String, String> setRedis(String vehicleUnid) {
 

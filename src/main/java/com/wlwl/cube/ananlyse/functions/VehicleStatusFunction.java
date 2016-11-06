@@ -62,7 +62,7 @@ public class VehicleStatusFunction extends BaseFunction {
 	@Override
 	public void cleanup() {
 		
-		
+		jdbcUtils.releaseConn();
 	}
 	/*
 	 * (non-Javadoc)
@@ -195,13 +195,13 @@ public class VehicleStatusFunction extends BaseFunction {
 		if (!isMatch)// 设置上线默认值
 		{
 
-			String currentStatus = util.hget(id, Conf.ACTIVE_STATUS);
+			//String currentStatus = util.hget(id, Conf.ACTIVE_STATUS);
 			//System.out.println(omok.getDATIME_RX());
 			//System.out.println(currentStatus);
-			if (currentStatus ==null ||(currentStatus != null && currentStatus.equals("0"))) {
+			//if (currentStatus ==null ||(currentStatus != null && currentStatus.equals("0"))) {
 				util.hset(id, Conf.ACTIVE_STATUS, "2");
 				util.hset(id, Conf.DATIME_RX, omok.getDATIME_RX());
-			}
+			//}
 			isMatch = false;
 
 		}
@@ -216,7 +216,7 @@ public class VehicleStatusFunction extends BaseFunction {
 
 		String id = Conf.PERFIX + vehicleUnid;
 		String field = "fiber_unid";
-		String sql = "SELECT code,option,value,VALUE_LAST ,status  FROM cube.PDA_VEHICLE_DETAIL where fiber_unid=? and type=1";
+		String sql = "SELECT code,option,value,VALUE_LAST ,status  FROM cube.PDA_VEHICLE_DETAIL where fiber_unid=? and type=1 order by INX desc";
 		List<Object> params = new ArrayList<Object>();
 		String fiber_unid = util.hget(id, field);
 

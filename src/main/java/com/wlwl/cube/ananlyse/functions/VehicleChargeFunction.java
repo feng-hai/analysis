@@ -64,14 +64,14 @@ public class VehicleChargeFunction extends BaseFunction {
 	private JdbcUtils jdbcUtils = null;
 
 	// private Map<String, VehicleStatisticBean> lastCharges = null;
-	// private long lastTime;
+	private long lastTimeCharge;
 
 	@Override
 	public void prepare(Map conf, TridentOperationContext context) {
 		util = RedisSingleton.instance();
 		jdbcUtils = SingletonJDBC.getJDBC();
 		// lastCharges = new HashMap<String, VehicleStatisticBean>();
-		// lastTime = System.currentTimeMillis();
+		lastTimeCharge = System.currentTimeMillis();
 
 	}
 
@@ -91,77 +91,12 @@ public class VehicleChargeFunction extends BaseFunction {
 			if (omok != null) {
 				checkCharge(omok);
 
-				updateChargeConfig(omok.getVehicle_UNID().getValue());
+				updateChargeConfig();
 			}
 		} catch (Exception e) {
 
 			e.printStackTrace();
 		}
-	}
-
-	/**
-	 * @Title: checkCharge
-	 * @Description: 判断充电是否满足条件 如果满足返回true ，如果不满足返回false
-	 * @param @param
-	 *            vehicle
-	 * @param @return
-	 *            设定文件 @return Boolean 返回类型 @throws
-	 */
-	private Boolean isCharge(ObjectModelOfKafka vehicle) {
-		// String status = vehicle.getChargeStatus();
-
-		String vehicleCharge = Conf.VEHICLE_CONDITION_CHARGE + vehicle.getVehicle_UNID().getValue();
-		// 從redis中獲取數據
-
-		Map<String, String> map = util.hgetall(vehicleCharge);
-
-		if (map.size() == 0) {
-
-			// redis 中沒有數據，從數據庫中讀取並複製
-			map = setRedis(vehicle.getVehicle_UNID().getValue());
-
-			if (map.size() > 0) {
-				util.hmset(vehicleCharge, map);
-			}
-		}
-		Iterator<String> it = map.keySet().iterator();
-
-		while (it.hasNext()) {
-
-			String key;
-
-			String valueStr;
-
-			key = it.next().toString();
-
-			valueStr = map.get(key);
-
-			VehicleStatusBean statusBean = JsonUtils.deserialize(valueStr, VehicleStatusBean.class);
-
-			Pair pair = vehicle.getPairByCode(statusBean.getCODE());
-			
-		
-
-			if (pair != null) {
-
-				String value = pair.getValue();
-
-				if (value != null && value != "") {
-
-					Boolean isTrue = statusBean.checkStatus(value);
-					if (isTrue) {
-						System.out.println("充电状态");
-						System.out.println(JsonUtils.serialize(pair));
-						System.out.println(JsonUtils.serialize(vehicle));
-						return isTrue;
-					}
-
-				}
-			}
-		}
-
-		return false;
-
 	}
 
 	/**
@@ -174,33 +109,36 @@ public class VehicleChargeFunction extends BaseFunction {
 	private void checkCharge(ObjectModelOfKafka vehicle) {
 
 		VehicleStatisticBean vehicleObj = new VehicleStatisticBean();
-
 		vehicleObj.setVehicle_unid(vehicle.getVehicle_UNID().getValue());
-
 		// 保存到hbase中时间值
-		vehicleObj.setWorkTimeDateTime_end(vehicle.getTIMESTAMP());
+		// vehicleObj.setWorkTimeDateTime_end(vehicle.getTIMESTAMP());
 
 		// redis 中保存充电状态的key
 		String id = PERFIX + vehicle.getVehicle_UNID().getValue() + "charge";
 
 		if (isCharge(vehicle)) {// 判断是否是充电状态
+
 			Double chargeNum = 0.0;
 
-			util.set(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id, Long.toString(System.currentTimeMillis()));
+			util.set(Conf.STORM_TIMER +Conf.ACTIVE_CHARGE_TIMER+ id, Long.toString(System.currentTimeMillis()));
 			// lastTime = System.currentTimeMillis();
 			chargeNum = Double.parseDouble(vehicle.getInCharge().getValue());
 
 			// 获取充电量
-
 			ChargeBean cbean;
 
+			// 获取上一次保存的数据
 			String str = util.hget(id, "charges");
 
 			if (str != null) {
-				//System.out.println(id + "继续充电" + StateUntils.formate(new Date()) + str);
+				// System.out.println(id + "继续充电" + StateUntils.formate(new
+				// Date()) + str);
 				cbean = JsonUtils.deserialize(str, ChargeBean.class);
+
 				cbean.setEndDate(vehicle.getTIMESTAMP());
+
 				if (Double.parseDouble(vehicle.getSOC().getValue()) > 0) {
+
 					cbean.setEndSOC(Double.parseDouble(vehicle.getSOC().getValue()));
 
 					if (cbean.getStartCharge() <= 0) {
@@ -212,7 +150,8 @@ public class VehicleChargeFunction extends BaseFunction {
 
 			} else {
 
-				System.out.println(id + "开始充电" + StateUntils.formate(new Date()) + str);
+				// System.out.println(id + "开始充电" + StateUntils.formate(new
+				// Date()) + str);
 
 				cbean = new ChargeBean();
 
@@ -233,6 +172,7 @@ public class VehicleChargeFunction extends BaseFunction {
 				if (!HBaseUtils.exists(tableName_Charge)) {
 					HBaseUtils.createTable(tableName_Charge, family_charge);
 				}
+
 				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
 						"startDate", StateUntils.formate(cbean.getStartDate()));
 
@@ -247,23 +187,19 @@ public class VehicleChargeFunction extends BaseFunction {
 
 		} else {
 
-			String str = util.hget(id, "charges");
-
-			String time = util.get(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id);
-			if (time == null) {
+			String time = util.get(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER+ id);
+			if (time == null || time.equals("")) {
 				return;
 			}
 			Long lastTime = Long.parseLong(time);
 			Long currentTime = System.currentTimeMillis();
-//			if (str != null) {
-//				System.out.println(id + "结束充电-开始" + StateUntils.formate(new Date(currentTime)) + "-"
-//						+ StateUntils.formate(new Date(lastTime)));
-//			}
-			if (currentTime - lastTime > 1000 * 60 * 10) {
-				System.out.println(id + "结束充电-结束" + StateUntils.formate(new Date()) + str);
-				util.del(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id);
+			 
+			
+			System.out.println((currentTime - lastTime)/60000);
+			if (currentTime - lastTime > 1000 * 60 * 5) {
 
-				// String str = util.hget(id, "charges");
+				String str = util.hget(id, "charges");
+				System.out.println(id + "结束充电-结束" + StateUntils.formate(new Date()) + str);
 
 				if (str != null) {
 
@@ -291,21 +227,19 @@ public class VehicleChargeFunction extends BaseFunction {
 
 					HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
 							family_charge, "startSOC", cbean.getStartSOC().toString());
-					HBaseUtils.insert(tableName_Charge,
-
-							TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge, "endSOC",
-							cbean.getEndSOC().toString());
+					HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj),
+							family_charge, "endSOC", cbean.getEndSOC().toString());
 
 					String chargeQuantity = null;
 					String chargeNumber = null;
 					try {
-						
+
 						chargeQuantity = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj),
 								family, CHARGERQUANTITY);
 						chargeNumber = HBaseUtils.byGet(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicleObj),
 								family, CHARGECOUNT);
 					} catch (Exception e) {
-						e.printStackTrace();
+						// e.printStackTrace();
 					}
 
 					if (chargeNumber != null) {
@@ -331,6 +265,7 @@ public class VehicleChargeFunction extends BaseFunction {
 
 					}
 					util.hdel(id, "charges");
+					util.del(Conf.STORM_TIMER +Conf.ACTIVE_CHARGE_TIMER+ id);
 				}
 			}
 
@@ -338,52 +273,87 @@ public class VehicleChargeFunction extends BaseFunction {
 	}
 
 	/**
-	 * @Title: updateChargeConfig @Description: 更新充电配置 @param @param device
-	 *         车辆唯一标识 @return void 返回类型 @throws
+	 * @Title: checkCharge
+	 * @Description: 判断充电是否满足条件 如果满足返回true ，如果不满足返回false
+	 * @param @param
+	 *            vehicle
+	 * @param @return
+	 *            设定文件 @return Boolean 返回类型 @throws
 	 */
-	private void updateChargeConfig(String device) {
+	private Boolean isCharge(ObjectModelOfKafka vehicle) {
+		// String status = vehicle.getChargeStatus();
 
-		String timekey = Conf.STORM_TIMER + device;
+		String vehicleCharge = Conf.VEHICLE_CONDITION_CHARGE + "config";// vehicle.getVehicle_UNID().getValue();
+		// 從redis中獲取數據
 
-		String timer = util.hget(timekey, Conf.ACTIVE_CHARGE_TIMER);
+		Map<String, String> map = util.hgetall(vehicleCharge);
 
-		if (timer != null) {
+		if (map.size() == 0) {
 
-			Date date = StateUntils.strToDate(timer);
+			// redis 中沒有數據，從數據庫中讀取並複製
+			map = setRedis();
 
-			if (date != null) {
+			if (map.size() > 0) {
+				util.hmset(vehicleCharge, map);
+			}
+		}
+       // System.out.println(map);
+        
+		String id = Conf.PERFIX + vehicle.getVehicle_UNID().getValue();
+		
+		String fiber_unid = util.hget(id, "fiber_unid");
+		
+		String valueStr = map.get(fiber_unid + "3");
+		
+		//System.out.println(valueStr);
+		
+		if (valueStr != null && valueStr != "") {
 
-				long m = new Date().getTime() - date.getTime();
+			VehicleStatusBean statusBean = JsonUtils.deserialize(valueStr, VehicleStatusBean.class);
 
-				if (m > 1000 * 60 * 3) {
+			Pair pair = vehicle.getPairByCode(statusBean.getCODE());
 
-					util.hset(timekey, Conf.ACTIVE_CHARGE_TIMER, StateUntils.formate(new Date()));
+			if (pair != null) {
 
-					// 更新数据
-					String vehicleStatus = Conf.VEHICLE_CONDITION_CHARGE + device;
+				String value = pair.getValue();
 
-					Map<String, String> map = setRedis(device);
-					System.out.println(map);
+				if (value != null && value != "") {
 
-					if (map.size() > 0) {
-
-						util.del(vehicleStatus);
-
-						util.hmset(vehicleStatus, map);
+					Boolean isTrue = statusBean.checkStatus(value);
+					if (isTrue) {
+						
+						return isTrue;
 					}
 
 				}
-			} else {
+			}
+		}
+		return false;
 
-				util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER, StateUntils.formate(new Date()));
+	}
 
+	/**
+	 * @Title: updateChargeConfig @Description: 更新充电配置 @param @param device
+	 *         车辆唯一标识 @return void 返回类型 @throws
+	 */
+	private void updateChargeConfig() {
+
+		long currentTime = System.currentTimeMillis();
+		if (currentTime - lastTimeCharge > 1000 * 60 * 5) {
+			lastTimeCharge=currentTime;
+			String vehicleAlarm = Conf.VEHICLE_CONDITION_CHARGE + "config";
+
+			Map<String, String> map = setRedis();
+
+			if (map.size() > 0) {
+
+				util.del(vehicleAlarm);
+
+				util.hmset(vehicleAlarm, map);
 			}
 
-		} else {
-
-			util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER, StateUntils.formate(new Date()));
-
 		}
+		
 
 	}
 
@@ -392,42 +362,27 @@ public class VehicleChargeFunction extends BaseFunction {
 	 * @Title: setRedis
 	 * @Description: TODO(这里用一句话描述这个方法的作用)
 	 * @param 设定文件
-	 * 			@return void 返回类型 @throws
+	 * @return void 返回类型 @throws
 	 */
-	private Map<String, String> setRedis(String vehicleUnid) {
+	private Map<String, String> setRedis() {
 
-		String id = Conf.PERFIX + vehicleUnid;
-
-		String field = "fiber_unid";
-
-		String sql = "SELECT code,option,value,VALUE_LAST ,status  FROM cube.PDA_VEHICLE_DETAIL where fiber_unid=? and type=1 and status=3";
+		String sql = "SELECT code,option,value,VALUE_LAST ,status,FIBER_UNID  FROM cube.PDA_VEHICLE_DETAIL where type=1 and status=3";
 
 		List<Object> params = new ArrayList<Object>();
-
-		String fiber_unid = util.hget(id, field);
-
-		params.add(fiber_unid);
 
 		List<VehicleStatusBean> list = null;
 		try {
 
 			list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);
-
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
 		Map<String, String> map = new HashMap<String, String>();
-
 		for (VehicleStatusBean vsbean : list) {
-
-			map.put(vsbean.getStatus().toString(), JsonUtils.serialize(vsbean));
-
+			map.put(vsbean.getFIBER_UNID() + vsbean.getStatus().toString(), JsonUtils.serialize(vsbean));
 		}
-
 		return map;
-
 	}
 
 }

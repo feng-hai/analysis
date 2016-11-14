@@ -31,6 +31,16 @@ public class VehicleStatusBean implements Serializable {
 	private String OPTION="=";
 	private Integer VALUE=0;
 	private Integer VALUE_LAST=0;
+	private String FIBER_UNID="";
+	
+	public String getFIBER_UNID() {
+		return FIBER_UNID;
+	}
+
+	public void setFIBER_UNID(String fIBER_UNID) {
+		FIBER_UNID = fIBER_UNID;
+	}
+
 	/**
 	* @return cODE
 	*/

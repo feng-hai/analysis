@@ -8,16 +8,19 @@
 */
 package com.wlwl.cube.hbase;
 
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.storm.trident.state.State;
-import org.apache.storm.tuple.Values;
-
 import com.wlwl.cube.analyse.bean.VehicleStatisticBean;
+import com.wlwl.cube.analyse.bean.VehicleStatusBean;
 import com.wlwl.cube.ananlyse.state.JsonUtils;
 import com.wlwl.cube.ananlyse.state.StateUntils;
 import com.wlwl.cube.ananlyse.state.TimeBaseRowStrategy;
+import com.wlwl.cube.mysql.SingletonJDBC;
 
 /**
  * @ClassName: HbaseState
@@ -56,7 +59,7 @@ public class HBaseState implements State {
 			if (!HBaseUtils.exists(tableName)) {
 				HBaseUtils.createTable(tableName, family);
 			}
-			
+
 			for (VehicleStatisticBean vehicle : vehicles) {
 				System.out.println(JsonUtils.serialize(vehicle));
 				if (vehicle != null) {
@@ -64,9 +67,10 @@ public class HBaseState implements State {
 					insertDataForEnergy(vehicle);
 					insertDataForFule(vehicle);
 					insertDataForWorkTime(vehicle);
+					updateVehicleHours(String .valueOf(vehicle.getWorkTimeCount()),vehicle.getVehicle_unid());
 				}
 			}
-			//HBaseUtils.close();
+			// HBaseUtils.close();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -74,7 +78,7 @@ public class HBaseState implements State {
 	}
 
 	public List<VehicleStatisticBean> bulkGetVehicles(List<String> vehicleIDs) {
-		
+
 		return null;
 	}
 
@@ -97,15 +101,14 @@ public class HBaseState implements State {
 		}
 
 	}
-	
-	private void insertDataForWorkTime(VehicleStatisticBean vehicle)
-	{
-		
-		if(vehicle.getWorkTimeCount()>0)
-		{
-			
+
+	private void insertDataForWorkTime(VehicleStatisticBean vehicle) {
+
+		if (vehicle.getWorkTimeCount() > 0) {
+
 			HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicle), family, "workTimeCount",
-					 String.valueOf(vehicle.getWorkTimeCount()));
+					String.valueOf(vehicle.getWorkTimeCount()));
+			
 		}
 	}
 
@@ -135,6 +138,24 @@ public class HBaseState implements State {
 		HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicle), family, "FuleTatol",
 				vehicle.getWorkFule_end().toString());
 
+	}
+	
+	private void  updateVehicleHours(String hours,String vehicle_unid)
+	{
+		String sql = "update sensor.ANA_SNAPSHOT set hours=?  where unid=?";
+
+		List<Object> params = new ArrayList<Object>();
+		params.add(hours);
+		params.add(vehicle_unid);
+	
+		try {
+
+			SingletonJDBC.getJDBC().updateByPreparedStatement(sql, params);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 
 }

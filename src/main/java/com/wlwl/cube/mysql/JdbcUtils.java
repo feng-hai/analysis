@@ -90,6 +90,10 @@ public class JdbcUtils {
     public boolean updateByPreparedStatement(String sql, List<Object>params)throws SQLException{  
         boolean flag = false;  
         int result = -1;  
+        if(connection.isClosed())
+        {
+        	getConnection();
+        }
         pstmt = connection.prepareStatement(sql);  
         int index = 1;  
         if(params != null && !params.isEmpty()){  
@@ -112,6 +116,10 @@ public class JdbcUtils {
     public Map<String, Object> findSimpleResult(String sql, List<Object> params) throws SQLException{  
         Map<String, Object> map = new HashMap<String, Object>();  
         int index  = 1;  
+        if(connection.isClosed())
+        {
+        	getConnection();
+        }
         pstmt = connection.prepareStatement(sql);  
         if(params != null && !params.isEmpty()){  
             for(int i=0; i<params.size(); i++){  
@@ -142,7 +150,11 @@ public class JdbcUtils {
      */  
     public List<Map<String, Object>> findModeResult(String sql, List<Object> params) throws SQLException{  
         List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();  
-        int index = 1;  
+        int index = 1; 
+        if(connection.isClosed())
+        {
+        	getConnection();
+        }
         pstmt = connection.prepareStatement(sql);  
         if(params != null && !params.isEmpty()){  
             for(int i = 0; i<params.size(); i++){  
@@ -179,6 +191,10 @@ public class JdbcUtils {
             Class<T> cls )throws Exception{  
         T resultObject = null;  
         int index = 1;  
+        if(connection.isClosed())
+        {
+        	getConnection();
+        }
         pstmt = connection.prepareStatement(sql);  
         if(params != null && !params.isEmpty()){  
             for(int i = 0; i<params.size(); i++){  
@@ -217,6 +233,10 @@ public class JdbcUtils {
             Class<T> cls )throws Exception {  
         List<T> list = new ArrayList<T>();  
         int index = 1;  
+        if(connection.isClosed())
+        {
+        	getConnection();
+        }
         pstmt = connection.prepareStatement(sql);  
         if(params != null && !params.isEmpty()){  
             for(int i = 0; i<params.size(); i++){  

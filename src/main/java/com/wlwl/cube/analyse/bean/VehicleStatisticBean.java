@@ -37,6 +37,16 @@ public class VehicleStatisticBean implements Serializable {
 
 	private Date workTimeDateTime_start_t;
 	private Date workTimeDateTime_end_t;
+	private Date workTimeDateTime_min_t;
+	public Date getWorkTimeDateTime_min_t() {
+		return workTimeDateTime_min_t;
+	}
+
+	public void setWorkTimeDateTime_min_t(Date workTimeDateTime_min_t) {
+		this.workTimeDateTime_min_t = workTimeDateTime_min_t;
+	}
+
+
 	// 里程
 	private Double workMileCount = 0.0;
 	private Double workMile_start = 0.0;

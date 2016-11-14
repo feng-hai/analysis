@@ -159,11 +159,13 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 	 */
 	private void insertDataForAlarm(VehicleStatisticBean vehicle) {
 		
-		String sql = "SELECT count(*) alarmCount FROM sensor.ANA_VEHICLE_EVENT where entity_unid=?  and  DATIME_BEGIN between  STR_TO_DATE(?,\"%Y-%m-%d %H:%i:%s\") and  STR_TO_DATE(?,\"%Y-%m-%d %H:%i:%s\")";
+		String sql = "SELECT count(0) alarmCount FROM sensor.ANA_VEHICLE_EVENT where entity_unid=?  and  DATIME_BEGIN between  STR_TO_DATE(?,\"%Y-%m-%d %H:%i:%s\") and  STR_TO_DATE(?,\"%Y-%m-%d %H:%i:%s\")";
 		List<Object> params = new ArrayList<Object>();
 		params.add(vehicle.getVehicle_unid());
+		
 		params.add(new SimpleDateFormat("yyyy-MM-dd").format(vehicle.getStatisticDateTime()) + " 00:00:00");
 		params.add(new SimpleDateFormat("yyyy-MM-dd").format(vehicle.getStatisticDateTime()) + " 23:59:59");
+	
 		Map<String, Object> list = null;
 		try {
 			list = jdbcUtils.findSimpleResult(sql, params);

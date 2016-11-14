@@ -28,7 +28,7 @@ package com.wlwl.cube.analyse.common;
 * @date 2016年10月16日 上午10:25:58
 *
 */ 
-public class Conf {
+public class Conf{
 	/* Redis 设置*/
 	public static final String REDIS_HOST_KEY = "";
 	public static final String REDIS_PORT_KEY = "";
@@ -83,7 +83,7 @@ public class Conf {
 	/**
 	* @Fields VEHICLE_CONDITION_CHARGE : 车辆充电的判断条件，存储key
 	*/ 
-	public static final String VEHICLE_CONDITION_CHARGE= "VEHICLE_CHARGE_STATE:";
+	public static final String VEHICLE_CONDITION_CHARGE= "VEHICLE_STATUS_STATE:";
 	
 //	/**
 //	* @Fields ZKURL : zookeeper 地址

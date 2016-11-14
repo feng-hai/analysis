@@ -8,7 +8,6 @@
 */
 package com.wlwl.cube.ananlyse.functions;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -59,6 +58,10 @@ public class VehicleStatusFunction extends BaseFunction {
 		jdbcUtils = SingletonJDBC.getJDBC();
 	}
 
+	/* (non-Javadoc)
+	 * @see org.apache.storm.trident.operation.BaseOperation#cleanup()
+	 * 退出时清理链接
+	 */
 	@Override
 	public void cleanup() {
 		
@@ -127,6 +130,9 @@ public class VehicleStatusFunction extends BaseFunction {
 
 	}
 
+	/**
+	 * 检查5分钟没有上线的车辆，并把车辆设置为离线状态
+	 */
 	private void updateNoOnline() {
 		String timekey = Conf.STORM_TIMER + "ONLINETIER";
 		String timer = util.hget(timekey, Conf.ACTIVE_ONLINE_TIMER);
@@ -151,6 +157,10 @@ public class VehicleStatusFunction extends BaseFunction {
 
 	}
 
+	/**
+	 * @param omok    读取kafka的实体类对象
+	 * @param device  车辆唯一标识 vehicle_unid
+	 */
 	private void updateVehicleStatus(ObjectModelOfKafka omok, String device) {
 
 		String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS + device;

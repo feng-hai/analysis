@@ -142,7 +142,7 @@ public class HBaseState implements State {
 	
 	private void  updateVehicleHours(String hours,String vehicle_unid)
 	{
-		String sql = "update sensor.ANA_SNAPSHOT set hours=?  where unid=?";
+		String sql = "update sensor.ANA_SNAPSHOT set hours=hours+?  where unid=?";
 
 		List<Object> params = new ArrayList<Object>();
 		params.add(hours);

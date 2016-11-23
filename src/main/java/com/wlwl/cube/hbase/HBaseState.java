@@ -67,7 +67,7 @@ public class HBaseState implements State {
 					insertDataForEnergy(vehicle);
 					insertDataForFule(vehicle);
 					insertDataForWorkTime(vehicle);
-					updateVehicleHours(String .valueOf(vehicle.getWorkTimeCount()),vehicle.getVehicle_unid());
+					updateVehicleHours(String .valueOf(vehicle.getWorkTimeDateTime_temp()),vehicle.getVehicle_unid());
 				}
 			}
 			// HBaseUtils.close();

@@ -77,6 +77,9 @@ public class SaveValueToRedisFunction extends BaseFunction {
 				VehicleStatisticBean vehicle = redis.getStorager(id);
 				// 更新公共数据
 				setPublicValue(vehicle, omok, device);
+				
+				
+				vehicle.setWorkTimeDateTime_temp(0);
 
 				// 结束时间为空时
 				if (omok.getDATIME_RX() != null && omok.getDATIME_RX() != ""
@@ -98,10 +101,7 @@ public class SaveValueToRedisFunction extends BaseFunction {
 				// 工作时间统计
 				Date tempDate = StateUntils.strToDate(omok.getDATIME_RX());
 				if (tempDate.getTime() > vehicle.getWorkTimeDateTime_end_t().getTime()) {
-					if (vehicle.getWorkTimeCount() / 3600000 > 24) {
-						vehicle.setWorkTimeCount(vehicle.getWorkTimeDateTime_end().getTime()
-								- vehicle.getWorkTimeDateTime_start().getTime());
-					}
+					
 					if (tempDate.getTime() - vehicle.getWorkTimeDateTime_end_t().getTime() >= 1000 * 60 * 5)// 判断是两次工作
 					{
 						vehicle.setWorkTimeDateTime_start_t(tempDate);
@@ -110,11 +110,23 @@ public class SaveValueToRedisFunction extends BaseFunction {
 					vehicle.setWorkTimeDateTime_end_t(tempDate);
 					vehicle.setWorkTimeCount(vehicle.getWorkTimeCount() + vehicle.getWorkTimeDateTime_end_t().getTime()
 							- vehicle.getWorkTimeDateTime_start_t().getTime());
+					//设置差值
+					vehicle.setWorkTimeDateTime_temp(vehicle.getWorkTimeDateTime_end_t().getTime()
+							- vehicle.getWorkTimeDateTime_start_t().getTime());
+					
 					vehicle.setWorkTimeDateTime_start_t(vehicle.getWorkTimeDateTime_end_t());
+					
+					if (vehicle.getWorkTimeCount() / 3600000 > 24) {
+						vehicle.setWorkTimeCount(vehicle.getWorkTimeDateTime_end().getTime()
+								- vehicle.getWorkTimeDateTime_start().getTime());
+					}
 					//System.out.println(vehicle.getWorkTimeCount());
 
 				} else if (tempDate.getTime() < vehicle.getWorkTimeDateTime_min_t().getTime()) {
 					vehicle.setWorkTimeCount(vehicle.getWorkTimeCount() + vehicle.getWorkTimeDateTime_min_t().getTime()
+							- tempDate.getTime());
+					//设置差值
+					vehicle.setWorkTimeDateTime_temp(vehicle.getWorkTimeDateTime_min_t().getTime()
 							- tempDate.getTime());
 					vehicle.setWorkTimeDateTime_min_t(tempDate);
 				}

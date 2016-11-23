@@ -38,6 +38,21 @@ public class VehicleStatisticBean implements Serializable {
 	private Date workTimeDateTime_start_t;
 	private Date workTimeDateTime_end_t;
 	private Date workTimeDateTime_min_t;
+	
+	private float workTimeDateTime_temp=0;
+	
+	public float getWorkTimeDateTime_temp() {
+		return workTimeDateTime_temp;
+	}
+
+	/**
+	 * @param workTimeDateTime_temp
+	 * 设置临时时间，保存时间差值
+	 */
+	public void setWorkTimeDateTime_temp(float workTimeDateTime_temp) {
+		this.workTimeDateTime_temp = workTimeDateTime_temp;
+	}
+
 	public Date getWorkTimeDateTime_min_t() {
 		return workTimeDateTime_min_t;
 	}

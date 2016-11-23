@@ -60,12 +60,15 @@ public class HBaseVehicleUpdate extends BaseStateUpdater<HBaseState> {
 		// ArrayList<VehicleStatisticBean>();
 		for (TridentTuple t : tuples) {
 			VehicleStatisticBean vehicle = (VehicleStatisticBean) t.getValueByField("vehicleInfo");
-			if (lastVehicles.containsKey(vehicle.getVehicle_unid())) {
-
-				lastVehicles.replace(vehicle.getVehicle_unid()+StateUntils.formateDay(vehicle.getWorkTimeDateTime_end_t()), vehicle);
+			
+			String key =vehicle.getVehicle_unid()+StateUntils.formateDay(vehicle.getWorkTimeDateTime_end_t());
+			if (lastVehicles.containsKey(key)) {
+				VehicleStatisticBean vehicle_temp=	lastVehicles.get(key);
+				vehicle.setWorkTimeDateTime_temp(vehicle.getWorkTimeDateTime_temp()+vehicle_temp.getWorkTimeDateTime_temp());
+				lastVehicles.replace(key, vehicle);
 			} else {
 
-				lastVehicles.put(vehicle.getVehicle_unid()+StateUntils.formateDay(vehicle.getWorkTimeDateTime_end_t()), vehicle);
+				lastVehicles.put(key, vehicle);
 
 			}
 			// vehicles.add(vehicle);

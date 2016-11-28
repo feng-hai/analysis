@@ -257,17 +257,17 @@ public class VehicleStatusFunction extends BaseFunction {
 	public void checkOnLine() {
 		Set<String> set = util.keys(Conf.PERFIX + "*");
 		for (String str : set) {
-			String status = util.hget(str, Conf.ACTIVE_STATUS);
-			if (status != null && status != "0") {
-				String time = util.hget(str, Conf.DATIME_RX);
-				if (time != null) {// 如果时间存在
-					if (new Date().getTime() - StateUntils.strToDate(time).getTime() > 1000 * 60 * 2) {
-						util.hset(str, Conf.ACTIVE_STATUS, "0");
-					}
-				} else {// 如果时间不存在
+			//String status = util.hget(str, Conf.ACTIVE_STATUS);
+			//if (status != null && status != "0") {
+				//String time = util.hget(str, Conf.DATIME_RX);
+//				if (time != null) {// 如果时间存在
+//					if (new Date().getTime() - StateUntils.strToDate(time).getTime() > 1000 * 60 * 2) {
+//						util.hset(str, Conf.ACTIVE_STATUS, "0");
+//					}
+//				} else {// 如果时间不存在
 					util.hset(str, Conf.ACTIVE_STATUS, "0");
-				}
-			}
+				//}
+			//}
 		}
 		set = null;
 	}

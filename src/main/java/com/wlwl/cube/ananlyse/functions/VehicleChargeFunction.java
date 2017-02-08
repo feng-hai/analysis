@@ -195,11 +195,11 @@ public class VehicleChargeFunction extends BaseFunction {
 			Long currentTime = System.currentTimeMillis();
 			 
 			
-			System.out.println((currentTime - lastTime)/60000);
+			//System.out.println((currentTime - lastTime)/60000);
 			if (currentTime - lastTime > 1000 * 60 * 5) {
 
 				String str = util.hget(id, "charges");
-				System.out.println(id + "结束充电-结束" + StateUntils.formate(new Date()) + str);
+				//System.out.println(id + "结束充电-结束" + StateUntils.formate(new Date()) + str);
 
 				if (str != null) {
 

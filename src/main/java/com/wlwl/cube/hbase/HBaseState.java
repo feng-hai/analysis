@@ -1,5 +1,5 @@
 /**  
-* @Title: HbaseState.java
+/* @Title: HbaseState.java
 * @Package com.wlwl.cube.hbase
 * @Description: TODO(用一句话描述该文件做什么)
 * @author fenghai  
@@ -61,7 +61,7 @@ public class HBaseState implements State {
 			}
 
 			for (VehicleStatisticBean vehicle : vehicles) {
-				System.out.println(JsonUtils.serialize(vehicle));
+				//System.out.println(JsonUtils.serialize(vehicle));
 				if (vehicle != null) {
 					insertDataForMile(vehicle);
 					insertDataForEnergy(vehicle);

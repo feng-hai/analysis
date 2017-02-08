@@ -76,7 +76,7 @@ public class TridentKafkaSpout {
 		config.ignoreZkOffsets = true;
 		
 
-		config.startOffsetTime = kafka.api.OffsetRequest.LatestTime(); // -2
+		config.startOffsetTime =-1;//kafka.api.OffsetRequest.LatestTime(); // -2
 																		// 从kafka头开始
 																		// -1
 																		// 是从最新的开始

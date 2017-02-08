@@ -45,7 +45,7 @@ public class HBaseUtils {
 		
 		if(con==null)
 		{
-			System.out.println("开始");
+			//System.out.println("开始");
 			conf = HBaseConfiguration.create(); // 获得配制文件对象
 			// conf.set("hbase.zookeeper.quorum", "192.168.52.140");
 			try {
@@ -53,7 +53,7 @@ public class HBaseUtils {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			System.out.println("结束");
+			//System.out.println("结束");
 		}
 	}
 

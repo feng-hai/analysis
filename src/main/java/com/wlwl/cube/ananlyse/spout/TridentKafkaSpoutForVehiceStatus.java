@@ -74,12 +74,12 @@ public class TridentKafkaSpoutForVehiceStatus {
 	public TransactionalTridentKafkaSpout createKafkaSpout() {
 		ZkHosts hosts = new ZkHosts(zkUrl);
 		
-		TridentKafkaConfig config = new TridentKafkaConfig(hosts, "pairs_up", "vehicleStatus01");
+		TridentKafkaConfig config = new TridentKafkaConfig(hosts, "pairs_up", "vehicleStatus02");
 		config.scheme = new SchemeAsMultiScheme(new StringScheme());
 		// Consume new data from the topic
 		config.ignoreZkOffsets = true;
 
-		config.startOffsetTime = kafka.api.OffsetRequest.LatestTime(); // -2
+		config.startOffsetTime = -1;//kafka.api.OffsetRequest.LatestTime(); // -2
 																		// 从kafka头开始
 																		// -1
 																		// 是从最新的开始

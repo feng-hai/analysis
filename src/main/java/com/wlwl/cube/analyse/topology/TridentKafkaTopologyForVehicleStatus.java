@@ -107,7 +107,7 @@ public class TridentKafkaTopologyForVehicleStatus {
 //		}
 
 		System.out.println("Using Kafka zookeeper url: " + zkUrl + " broker url: " + brokerUrl);
-		TridentKafkaSpoutForVehiceStatus kafkaInstance = new TridentKafkaSpoutForVehiceStatus(zkUrl, brokerUrl, "pairs_up");
+		TridentKafkaSpoutForVehiceStatus kafkaInstance = new TridentKafkaSpoutForVehiceStatus(zkUrl, brokerUrl, "pairs_up");//pairs_up
 		if (args.length == 1) {
 			Config conf = new Config();
 			conf.setMaxSpoutPending(20);

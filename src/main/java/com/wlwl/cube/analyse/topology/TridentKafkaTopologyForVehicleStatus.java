@@ -110,9 +110,9 @@ public class TridentKafkaTopologyForVehicleStatus {
 		TridentKafkaSpoutForVehiceStatus kafkaInstance = new TridentKafkaSpoutForVehiceStatus(zkUrl, brokerUrl, "pairs_up");//pairs_up
 		if (args.length == 1) {
 			Config conf = new Config();
-			conf.setMaxSpoutPending(20);
-			conf.setMessageTimeoutSecs(60);
-			conf.setNumWorkers(1);
+			conf.setMaxSpoutPending(40);
+			conf.setMessageTimeoutSecs(160);
+			conf.setNumWorkers(2);
 			//conf.setDebug(true);
 			// submit the consumer topology.
 			StormSubmitter.submitTopology(args[0] + "-consumer", conf, kafkaInstance.buildConsumerTopology(null));

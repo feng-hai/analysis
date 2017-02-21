@@ -75,8 +75,9 @@ public class TridentKafkaSpout {
 		// Consume new data from the topic
 		config.ignoreZkOffsets = true;
 		
+		
 
-		config.startOffsetTime =-1;//kafka.api.OffsetRequest.LatestTime(); // -2
+		config.startOffsetTime =kafka.api.OffsetRequest.LatestTime(); // -2
 																		// 从kafka头开始
 																		// -1
 																		// 是从最新的开始
@@ -101,7 +102,7 @@ public class TridentKafkaSpout {
 		// addDRPCStream(tridentTopology, addTridentState(tridentTopology),
 		// drpc);
 
-		tridentTopology.newStream("spoutVehicleStatus", createKafkaSpout()).parallelismHint(3)
+		tridentTopology.newStream("spoutVehicleCount", createKafkaSpout()).parallelismHint(3)
 				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(3)
 				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId")).parallelismHint(3)
 				.partitionBy(new Fields("deviceId")).parallelismHint(3)

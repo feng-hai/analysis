@@ -31,8 +31,39 @@ public class VehicleStatusBean implements Serializable {
 	private String OPTION="=";
 	private Integer VALUE=0;
 	private Integer VALUE_LAST=0;
+	private Integer STATUS=0;
 	private String FIBER_UNID="";
+	private String REMARKS="";
+	private String ALARM_LEVEL="";
+	private String ALARM_NAME="";
+	public String getALARM_LEVEL() {
+		return ALARM_LEVEL;
+	}
+
+	public void setALARM_LEVEL(String aLARM_LEVEL) {
+		ALARM_LEVEL = aLARM_LEVEL;
+	}
+
+	public String getALARM_NAME() {
+		return ALARM_NAME;
+	}
+
+	public void setALARM_NAME(String aLARM_NAME) {
+		ALARM_NAME = aLARM_NAME;
+	}
+
 	
+
+	
+	
+	public String getREMARKS() {
+		return REMARKS;
+	}
+
+	public void setREMARKS(String rEMARKS) {
+		REMARKS = rEMARKS;
+	}
+
 	public String getFIBER_UNID() {
 		return FIBER_UNID;
 	}
@@ -121,7 +152,7 @@ public class VehicleStatusBean implements Serializable {
 	public void setVALUE_LAST(Integer vALUE_LAST) {
 		VALUE_LAST = vALUE_LAST;
 	}
-	private Integer STATUS=0;
+
 	
 	
 	

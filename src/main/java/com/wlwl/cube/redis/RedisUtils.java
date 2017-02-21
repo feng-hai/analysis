@@ -1,5 +1,6 @@
 package com.wlwl.cube.redis;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -9,6 +10,8 @@ import com.wlwl.cube.analyse.common.Conf;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.Pipeline;
+import redis.clients.jedis.Response;
 
 /**
  * @ClassName: RedisUtils
@@ -145,6 +148,8 @@ public class RedisUtils {
 		String value = null;
 		try {
 			jedis = pool.getResource();
+			
+		
 			value = jedis.get(key);
 		} catch (Exception e) {
 			jedis.close();
@@ -153,6 +158,55 @@ public class RedisUtils {
 			returnResource(pool, jedis);
 		}
 		return value;
+	}
+	
+	public Map<String,String> getkeys(List<String> keys){
+		Jedis jedis = null;
+	
+		Map<String,String> result = new HashMap<String,String>();
+		try {
+			jedis = pool.getResource();
+			Pipeline p = jedis.pipelined();
+			
+			Map<String,Response<String>> responses = new HashMap<String,Response<String>>(keys.size());
+			for(String key : keys) {
+			responses.put(key, p.get(key));
+			}
+			p.sync();
+			for(String k : responses.keySet()) {
+			result.put(k, responses.get(k).get());
+			}
+		} catch (Exception e) {
+			jedis.close();
+			e.printStackTrace();
+		} finally {
+			returnResource(pool, jedis);
+		}
+		return result;
+
+	}
+	
+	public Map<String,Map<String,String>> getAllKeys(List<String> keys){
+		Jedis jedis = null;
+		Map<String,Map<String,String>> result = new HashMap<String,Map<String,String>>();
+		try {
+			jedis = pool.getResource();
+			Pipeline p = jedis.pipelined();
+			Map<String,Response<Map<String,String>>> responses = new HashMap<String,Response<Map<String,String>>>(keys.size());
+			for(String key : keys) {
+			responses.put(key, p.hgetAll(key));
+			}
+			p.sync();
+			for(String k : responses.keySet()) {
+			result.put(k, responses.get(k).get());
+			}
+		} catch (Exception e) {
+			jedis.close();
+			e.printStackTrace();
+		} finally {
+			returnResource(pool, jedis);
+		}
+		return result;
 	}
 
 	/**

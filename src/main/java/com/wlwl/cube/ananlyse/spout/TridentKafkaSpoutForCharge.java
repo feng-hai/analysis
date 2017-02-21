@@ -96,7 +96,7 @@ public class TridentKafkaSpoutForCharge {
 		// addDRPCStream(tridentTopology, addTridentState(tridentTopology),
 		// drpc);
 
-		tridentTopology.newStream("spout1", createKafkaSpout()).parallelismHint(1)
+		tridentTopology.newStream("spoutCharge", createKafkaSpout()).parallelismHint(1)
 				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(1)
 				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId"))
 				.partitionBy(new Fields("deviceId"))

@@ -25,7 +25,6 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 import com.wlwl.cube.analyse.bean.ObjectModelOfKafka;
 import com.wlwl.cube.analyse.bean.Pair;
 
@@ -55,6 +54,7 @@ public class VehicleStatusFunction extends BaseFunction {
 	private JdbcUtils jdbcUtils = null;
 	private static final Logger LOG = LoggerFactory.getLogger(VehicleStatusFunction.class);
 	SimpleDateFormat DEFAULT_DATE_SIMPLEDATEFORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
 	@Override
 	public void prepare(Map conf, TridentOperationContext context) {
 		util = RedisSingleton.instance();
@@ -81,25 +81,29 @@ public class VehicleStatusFunction extends BaseFunction {
 	 */
 
 	public void execute(TridentTuple tuple, TridentCollector collector) {
+		ObjectModelOfKafka omok = (ObjectModelOfKafka) tuple.getValueByField("vehicle");
+		// LOG.debug(JsonUtils.serialize(omok));
 
+		String device = tuple.getStringByField("deviceId");
 		try {
-			ObjectModelOfKafka omok = (ObjectModelOfKafka) tuple.getValueByField("vehicle");
-			// LOG.debug(JsonUtils.serialize(omok));
-
-			String device = tuple.getStringByField("deviceId");
-
-			// 更新车辆在线状态
-			updateVehicleStatus(omok, device);
 			// 定时更新判断条件
 			updateCondition(device);
 			// 定时更新在线状态
 			updateNoOnline();
-
-			collector.emit(new Values(omok));
+			// 更新车辆在线状态
+			updateVehicleStatus(omok, device);
+		
 
 		} catch (Exception e) {
 
+			if (omok != null) {
+				System.out.println("车辆信息" + JsonUtils.serialize(omok));
+			}
+			System.out.println("车辆唯一编号" + device + "|" + omok.getDeviceId());
+
 			e.printStackTrace();
+		} finally {
+			collector.emit(new Values(omok));
 		}
 	}
 
@@ -169,61 +173,87 @@ public class VehicleStatusFunction extends BaseFunction {
 	 */
 	private void updateVehicleStatus(ObjectModelOfKafka omok, String device) {
 
-		String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS + device;
+		String timekey = Conf.STORM_TIMER + "ONLINETIERDEFAULT";
+		String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS  + device;
+
 		String id = Conf.PERFIX + device;
 
 		// 從redis中獲取數據
-		Map<String, String> map = util.hgetall(vehicleStatus);
+
+	    Map<String, String>	map = util.hgetall(vehicleStatus);
 		// 判斷redis中是否有數據
-		if (map.size() == 0) {
+		if (map == null || map.size() == 0) {
 			// redis 中沒有數據，從數據庫中讀取並複製
 			map = setRedis(device);
 			if (map.size() > 0) {
 				util.hmset(vehicleStatus, map);
 			}
 		}
-
+	
+		
 		Boolean isMatch = false;
-		Iterator<String> it = map.keySet().iterator();
-		while (it.hasNext()) {
-			String key;
-			String valueStr;
-			key = it.next().toString();
-			valueStr = map.get(key);
-			VehicleStatusBean statusBean = JsonUtils.deserialize(valueStr, VehicleStatusBean.class);
-			LOG.debug(JsonUtils.serialize(statusBean));
-			if (statusBean != null) {
-				// 根据key获取数据值
-				Pair pair = omok.getPairByCode(statusBean.getCODE());
 
-				if (pair != null) {
-					String value = pair.getValue();
-					Boolean isTrue = statusBean.checkStatus(value);
-					if (isTrue) {
-						isMatch = true;
-						util.hset(id, Conf.ACTIVE_STATUS, key);
-						util.hset(id, Conf.DATIME_RX, omok.getDATIME_RX());
-						break;
+		try {
+			Iterator<String> it = map.keySet().iterator();
+			while (it.hasNext()) {
+				String key;
+				String valueStr;
+				key = it.next().toString();
+				valueStr = map.get(key);
+				VehicleStatusBean statusBean = JsonUtils.deserialize(valueStr, VehicleStatusBean.class);
+
+				if (statusBean != null) {
+					// 根据key获取数据值
+					Pair pair = omok.getPairByCode(statusBean.getCODE());
+
+					if (pair != null) {
+						String value = pair.getValue();
+
+						if (value != null) {
+							Boolean isTrue = statusBean.checkStatus(value);
+							if (isTrue) {
+								isMatch = true;
+								util.hset(id, Conf.ACTIVE_STATUS, key);
+								util.hset(id, Conf.DATIME_RX, omok.getDATIME_RX());
+								util.hset(timekey, "default", StateUntils.formate(new Date()));
+								break;
+							}
+						}
 					}
 				}
 			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			util.del(vehicleStatus);
 		}
 		if (!isMatch)// 设置上线默认值
 		{
+			String timer = util.hget(timekey, "default");
+			if (timer != null) {
+				Date date = StateUntils.strToDate(timer);
+				if (date != null) {
+					long m = new Date().getTime() - date.getTime();
+					if (m > 1000 * 60) {
+						util.hset(id, Conf.ACTIVE_STATUS, "2");
+						util.hset(id, Conf.DATIME_RX, omok.getDATIME_RX());
+					}
+				}
 
-			// String currentStatus = util.hget(id, Conf.ACTIVE_STATUS);
+			} else {
+				util.hset(timekey, "default", StateUntils.formate(new Date()));
+			}
+			String currentStatus = util.hget(id, Conf.ACTIVE_STATUS);
+
 			// System.out.println(omok.getDATIME_RX());
 			// System.out.println(currentStatus);
-			// if (currentStatus ==null ||(currentStatus != null &&
-			// currentStatus.equals("0"))) {
-			util.hset(id, Conf.ACTIVE_STATUS, "2");
-			util.hset(id, Conf.DATIME_RX, omok.getDATIME_RX());
-			// }
+			if (currentStatus == null || (currentStatus != null && currentStatus.equals("0"))) {
+				util.hset(id, Conf.ACTIVE_STATUS, "2");
+			}
 			isMatch = false;
-
+		}
 		}
 
-	}
+	
 
 	/**
 	 * @return @Title: setRedis @Description: TODO(这里用一句话描述这个方法的作用) @param
@@ -233,10 +263,9 @@ public class VehicleStatusFunction extends BaseFunction {
 
 		String id = Conf.PERFIX + vehicleUnid;
 		String field = "fiber_unid";
-		String sql = "SELECT code,option,value,VALUE_LAST ,status  FROM cube.PDA_VEHICLE_DETAIL where fiber_unid=? and type=1 order by INX desc";
+		String sql = "SELECT code,option,value,VALUE_LAST ,status  FROM cube.PDA_CUSTOM_SETUP where fiber_unid=? and type=1 and flag_del=0 order by INX desc";
 		List<Object> params = new ArrayList<Object>();
 		String fiber_unid = util.hget(id, field);
-
 		LOG.debug("数据字典id" + fiber_unid);
 		params.add(fiber_unid);
 		List<VehicleStatusBean> list = null;
@@ -270,12 +299,12 @@ public class VehicleStatusFunction extends BaseFunction {
 			if (time != null) {// 如果时间存在
 				if (new Date().getTime() - StateUntils.strToDate(time).getTime() > 1000 * 60 * 1) {
 					util.hset(str, Conf.ACTIVE_STATUS, "0");
-					String unid=util.hget(str, "unid");
+					String unid = util.hget(str, "unid");
 					alertEnd(unid);
 				}
 			} else {// 如果时间不存在
 				util.hset(str, Conf.ACTIVE_STATUS, "0");
-				String unid=util.hget(str, "unid");
+				String unid = util.hget(str, "unid");
 				alertEnd(unid);
 			}
 			// }
@@ -287,10 +316,14 @@ public class VehicleStatusFunction extends BaseFunction {
 
 	private void alertEnd(String vehicleUnid) {
 		Map<String, String> result = util.hgetall(aiid_key + vehicleUnid);
-		for (String aiid : result.values()) {
-			if (aiid != null) {
+		for (String key : result.keySet()) {
+			String aiid = result.get(key);
+			String dateStr = result.get(key + "beginTime");
+
+			if (aiid != null && dateStr != null) {
 				StringBuilder update = new StringBuilder();
-				update.append("update sensor.ANA_VEHICLE_EVENT set FLAG_DID=1,DATIME_END=");
+
+				update.append("update sensor.ANA_VEHICLE_EVENT_" + dateStr + " set FLAG_DID=1,DATIME_END=");
 				update.append("'").append(DEFAULT_DATE_SIMPLEDATEFORMAT.format(new Date())).append("'");
 				update.append(" where AIID=").append(aiid);
 				try {
@@ -300,9 +333,8 @@ public class VehicleStatusFunction extends BaseFunction {
 					e.printStackTrace();
 				}
 
-				util.del(aiid_key + vehicleUnid);
-
 			}
 		}
+		util.del(aiid_key + vehicleUnid);
 	}
 }

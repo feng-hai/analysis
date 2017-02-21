@@ -97,11 +97,11 @@ public class Conf {
 	/**
 	* @Fields ZKURL : zookeeper 地址
 	*/ 
-	public static final String  ZKURL="GBIOTNN01:2181,GBIOTDN01:2181,GBIOTDN02:2181,GBIOTDN03:2181,GBIOTDN04:2181";
+	public static final String  ZKURL="namenode.cube:2181,maria.cube:2181,hyperrouter1.cube:2181,hyperrouter2.cube:2181";
 	/**
 	* @Fields BROKERURL : storm节点地址BrokerUrl
 	*/ 
-	public static final String BROKERURL="GBIOTNN01:9092,GBIOTDN01:9092,GBIOTDN02:9092,GBIOTDN03:9092,GBIOTDN04:9092";
+	public static final String BROKERURL="maria.cube:9092,namenode.cube:9092,datanode1.cube:9092,hyperrouter1.cube:9092,hyperrouter2.cube:9092";
 	
 	
 	/**
@@ -116,12 +116,12 @@ public class Conf {
 	public static final String FAMILY="count";
 	
 	
-	public static final String REDISURL="172.16.21.225";
+	public static final String REDISURL="10.117.177.94";
 	
 	
-	public static final String MYSQLURL="172.16.21.225:3306";//10.60.60.90:3306
+	public static final String MYSQLURL="10.252.248.176:3306";//10.60.60.90:3306
 	
-	public static final String  MYSQLPASSWORD="XmmflV<01fOIxO";
+	public static final String  MYSQLPASSWORD="STu2YW1bDF4p.pjA";
 
 
 }

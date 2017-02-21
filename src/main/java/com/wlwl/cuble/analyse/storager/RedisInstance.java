@@ -31,6 +31,7 @@ public class RedisInstance<T> extends RedisUtils implements IStorager<T> {
 	public RedisInstance(Class<T> entity){
 		
 		this.entity=entity;
+		
 	}
 	/*
 	 * (non-Javadoc)

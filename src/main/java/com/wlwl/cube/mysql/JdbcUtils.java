@@ -14,6 +14,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -140,6 +141,33 @@ public class JdbcUtils {
             }  
         }  
         return map;  
+    }  
+    
+    public int insertByPreparedStatement(String sql, List<Object>params)throws SQLException{  
+        boolean flag = false;  
+        int result = -1;  
+        if(connection.isClosed())
+        {
+        	getConnection();
+        }
+        pstmt = connection.prepareStatement(sql,Statement.RETURN_GENERATED_KEYS);  
+        int index = 1;  
+        if(params != null && !params.isEmpty()){  
+            for(int i=0; i<params.size(); i++){  
+                pstmt.setObject(index++, params.get(i));  
+            }  
+        }  
+        pstmt.execute();  
+        ResultSet rs = pstmt.getGeneratedKeys();
+    	if (rs.next())
+		{
+			int aiid = rs.getInt( 1 );
+			pstmt.close();
+			return aiid;
+			
+		}
+    	pstmt.close();
+        return -1;  
     }  
   
     /**查询多条记录 
@@ -336,9 +364,9 @@ public class JdbcUtils {
         /*******************查*********************/  
         
         
-    	String sql = "SELECT code,option,value,VALUE_LAST ,status  FROM cube.PDA_VEHICLE_DETAIL where fiber_unid=?";
+    	String sql = "SELECT code,option,value,VALUE_LAST,status  FROM  cube.PDA_CUSTOM_SETUP where fiber_unid='27A67D545CFF4AE3AD4DF45AB94A7C18' and type=1 order by INX desc";
 		List<Object> params = new ArrayList<Object>();
-		params.add("90A62ABEA6DB415D93D17DD31FBD5A1B");
+		
 		List<VehicleStatusBean> list = null;
 		try {
 			list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);

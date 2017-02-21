@@ -104,7 +104,7 @@ public class TridentKafkaSpoutForVehiceStatus {
 		// addDRPCStream(tridentTopology, addTridentState(tridentTopology),
 		// drpc);
 
-		tridentTopology.newStream("spoutVehicleStatus", createKafkaSpout()).parallelismHint(2)
+		tridentTopology.newStream("spoutVehicleStatus", createKafkaSpout()).parallelismHint(4)
 				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(2)
 				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId")).parallelismHint(2)
 				.partitionBy(new Fields("deviceId")).parallelismHint(2)

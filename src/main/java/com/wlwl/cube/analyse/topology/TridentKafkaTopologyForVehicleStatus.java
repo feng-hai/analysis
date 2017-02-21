@@ -110,7 +110,7 @@ public class TridentKafkaTopologyForVehicleStatus {
 		TridentKafkaSpoutForVehiceStatus kafkaInstance = new TridentKafkaSpoutForVehiceStatus(zkUrl, brokerUrl, "pairs_up");//pairs_up
 		if (args.length == 1) {
 			Config conf = new Config();
-			conf.setMaxSpoutPending(40);
+			conf.setMaxSpoutPending(100);
 			conf.setMessageTimeoutSecs(160);
 			conf.setNumWorkers(2);
 			//conf.setDebug(true);

@@ -9,6 +9,7 @@
 package com.wlwl.cube.mysql;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
  * @ClassName: SingletonJDBC
@@ -27,7 +28,7 @@ public class SingletonJDBC {
 
 	public static JdbcUtils getJDBC() {
 
-		if (connection == null) {
+		if (jdbcUtils == null) {
 			try {
 				jdbcUtils = new JdbcUtils();
 				connection = jdbcUtils.getConnection();
@@ -35,6 +36,17 @@ public class SingletonJDBC {
 				e.printStackTrace();
 				connection=null;
 				jdbcUtils=null;
+			}
+		}else
+		{
+			try {
+				if(connection==null||connection.isClosed())
+				{
+					connection = jdbcUtils.getConnection();
+				}
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 		return jdbcUtils;

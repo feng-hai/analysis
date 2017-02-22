@@ -58,7 +58,7 @@ public class VehicleStatusFunction extends BaseFunction {
 	@Override
 	public void prepare(Map conf, TridentOperationContext context) {
 		util = RedisSingleton.instance();
-		jdbcUtils = SingletonJDBC.getJDBC();
+
 	}
 
 	/*
@@ -92,7 +92,6 @@ public class VehicleStatusFunction extends BaseFunction {
 			updateNoOnline();
 			// 更新车辆在线状态
 			updateVehicleStatus(omok, device);
-		
 
 		} catch (Exception e) {
 
@@ -174,13 +173,13 @@ public class VehicleStatusFunction extends BaseFunction {
 	private void updateVehicleStatus(ObjectModelOfKafka omok, String device) {
 
 		String timekey = Conf.STORM_TIMER + "ONLINETIERDEFAULT";
-		String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS  + device;
+		String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS + device;
 
 		String id = Conf.PERFIX + device;
 
 		// 從redis中獲取數據
 
-	    Map<String, String>	map = util.hgetall(vehicleStatus);
+		Map<String, String> map = util.hgetall(vehicleStatus);
 		// 判斷redis中是否有數據
 		if (map == null || map.size() == 0) {
 			// redis 中沒有數據，從數據庫中讀取並複製
@@ -189,8 +188,7 @@ public class VehicleStatusFunction extends BaseFunction {
 				util.hmset(vehicleStatus, map);
 			}
 		}
-	
-		
+
 		Boolean isMatch = false;
 
 		try {
@@ -251,9 +249,7 @@ public class VehicleStatusFunction extends BaseFunction {
 			}
 			isMatch = false;
 		}
-		}
-
-	
+	}
 
 	/**
 	 * @return @Title: setRedis @Description: TODO(这里用一句话描述这个方法的作用) @param
@@ -266,21 +262,25 @@ public class VehicleStatusFunction extends BaseFunction {
 		String sql = "SELECT code,option,value,VALUE_LAST ,status  FROM cube.PDA_CUSTOM_SETUP where fiber_unid=? and type=1 and flag_del=0 order by INX desc";
 		List<Object> params = new ArrayList<Object>();
 		String fiber_unid = util.hget(id, field);
-		LOG.debug("数据字典id" + fiber_unid);
+		//LOG.error("数据字典id" + fiber_unid);
 		params.add(fiber_unid);
-		List<VehicleStatusBean> list = null;
-		try {
-			list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		List<VehicleStatusBean> list = new ArrayList<VehicleStatusBean>();
+
+		if (fiber_unid != null) {
+
+			try {
+				jdbcUtils = SingletonJDBC.getJDBC();
+				list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
-		LOG.debug("数据库中数据" + list);
 		Map<String, String> map = new HashMap<String, String>();
+
 		for (VehicleStatusBean vsbean : list) {
 			map.put(vsbean.getStatus().toString(), JsonUtils.serialize(vsbean));
 		}
-
 		return map;
 
 	}
@@ -327,6 +327,7 @@ public class VehicleStatusFunction extends BaseFunction {
 				update.append("'").append(DEFAULT_DATE_SIMPLEDATEFORMAT.format(new Date())).append("'");
 				update.append(" where AIID=").append(aiid);
 				try {
+					jdbcUtils = SingletonJDBC.getJDBC();
 					jdbcUtils.updateByPreparedStatement(update.toString(), new ArrayList<Object>());
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block

@@ -9,6 +9,7 @@
 package com.wlwl.cube.ananlyse.functions;
 
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -135,7 +136,7 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 
 	/**
 	 * @Title: saveMap @Description: 保存在线车辆缓存 @param @param vehicle 设定文件 @return
-	 * void 返回类型 @throws
+	 *         void 返回类型 @throws
 	 */
 	private void saveMap(VehicleStatisticBean vehicle) {
 		String id = vehicle.getVehicle_unid() + StateUntils.formateDay(vehicle.getStatisticDateTime());
@@ -241,27 +242,16 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 	private void updateVehicleStatus(ObjectModelOfKafka omok, String device) {
 
 		String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS + "alarm" + device;
-		String id = Conf.PERFIX + device;
-		Map<String, String> map;
-		// 從redis中獲取數據
-		if (util.exists(vehicleStatus)) {
-			map = util.hgetall(vehicleStatus);
-			// 判斷redis中是否有數據
-			if (map.size() == 0) {
-				// redis 中沒有數據，從數據庫中讀取並複製
-				map = setRedis(device);
-				if (map.size() > 0) {
-					util.hmset(vehicleStatus, map);
-				}
-			}
-		} else {
+
+		Map<String, String> map = util.hgetall(vehicleStatus);
+		// 判斷redis中是否有數據
+		if (map == null || map.size() == 0) {
+			// redis 中沒有數據，從數據庫中讀取並複製
 			map = setRedis(device);
 			if (map.size() > 0) {
 				util.hmset(vehicleStatus, map);
 			}
 		}
-
-		Boolean isMatch = false;
 		Iterator<String> it = map.keySet().iterator();
 		while (it.hasNext()) {
 			String key;
@@ -269,7 +259,6 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 			key = it.next().toString();
 			valueStr = map.get(key);
 			VehicleStatusBean statusBean = JsonUtils.deserialize(valueStr, VehicleStatusBean.class);
-			LOG.debug(JsonUtils.serialize(statusBean));
 			if (statusBean != null) {
 				// 根据key获取数据值
 				Pair pair = omok.getPairByCode(statusBean.getCODE());
@@ -278,46 +267,30 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 				String VehilceKey = "BIG_VEHICLE:" + unid;
 				String lat = util.hget(VehilceKey, "LAT_D");
 				String lng = util.hget(VehilceKey, "LAT_D");
-
-				String errorName = statusBean.getREMARKS();
-
+				String errorName = statusBean.getALARM_NAME();
+				String level = statusBean.getALARM_LEVEL();
 				if (pair != null) {
 					String value = pair.getValue();
 					Boolean isTrue = statusBean.checkStatus(value);
 					if (isTrue) {
-						isMatch = true;
 						if (key.equals("1")) {
 							String aiid = util.hget(aiid_key + unid, "StormCode");
-							if (aiid != null) {
-								alertEnd(unid, DEFAULT_DATE_SIMPLEDATEFORMAT.format(new Date()));
+							if (aiid == null) {
+								try {
+									alertBegin(unid, errorName, level, omok.getDATIME_RX(), lat, lng);
+								} catch (ParseException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
 							}
-
-							alertBegin(unid, errorName, DEFAULT_DATE_SIMPLEDATEFORMAT.format(new Date()), lat, lng);
-
-						} else if (key.equals("2")) {
-							alertEnd(unid, DEFAULT_DATE_SIMPLEDATEFORMAT.format(new Date()));
+						} else {
+							alertEnd(unid, omok.getDATIME_RX());
 						}
-						// util.hset(id, Conf.ACTIVE_STATUS, key);
-						// util.hset(id, Conf.DATIME_RX, omok.getDATIME_RX());
-						//break;
+
 					}
 				}
 			}
 		}
-		// if (!isMatch)// 设置上线默认值
-		// {
-		//
-		// // String currentStatus = util.hget(id, Conf.ACTIVE_STATUS);
-		// // System.out.println(omok.getDATIME_RX());
-		// // System.out.println(currentStatus);
-		// // if (currentStatus ==null ||(currentStatus != null &&
-		// // currentStatus.equals("0"))) {
-		// util.hset(id, Conf.ACTIVE_STATUS, "2");
-		// util.hset(id, Conf.DATIME_RX, omok.getDATIME_RX());
-		// // }
-		// isMatch = false;
-		//
-		// }
 
 	}
 
@@ -329,11 +302,9 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 
 		String id = Conf.PERFIX + vehicleUnid;
 		String field = "fiber_unid";
-		String sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS  FROM  cube.PDA_CUSTOM_SETUP where fiber_unid=? and type=2 and flag_del=0 order by INX desc";
+		String sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS,ALARM_LEVEL,ALARM_NAME  FROM  cube.PDA_CUSTOM_SETUP where fiber_unid=? and type=2 and flag_del=0 order by INX desc";
 		List<Object> params = new ArrayList<Object>();
 		String fiber_unid = util.hget(id, field);
-
-		LOG.debug("数据字典id" + fiber_unid);
 		params.add(fiber_unid);
 		List<VehicleStatusBean> list = null;
 		try {
@@ -342,7 +313,6 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		LOG.debug("数据库中数据" + list);
 		Map<String, String> map = new HashMap<String, String>();
 		for (VehicleStatusBean vsbean : list) {
 			map.put(vsbean.getStatus().toString(), JsonUtils.serialize(vsbean));
@@ -360,7 +330,6 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 			update.append("update sensor.ANA_VEHICLE_EVENT_" + dateStr + " set FLAG_DID=1,DATIME_END=");
 			update.append("'").append(date).append("'");
 			update.append(" where AIID=").append(aiid);
-
 			try {
 				jdbcUtils.updateByPreparedStatement(update.toString(), new ArrayList<Object>());
 			} catch (SQLException e) {
@@ -369,37 +338,22 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 			}
 
 			util.hdel(aiid_key + unid, "StormCode");
-
+			util.hdel(aiid_key + unid, "beginTime");
 		}
 	}
 
-	private void alertBegin(String unidin, String errorName, String date, String lat, String lng) {
+	
+	private void alertBegin(String unidin, String errorName, String level, String date, String lat, String lng)
+			throws ParseException {
 
-		String alarmKey = "VEHICLE_CONDITION_ALARM_STATUS:";
 		String unid = unidin; // 车辆唯一标识//snapshot.getEntity().getUnid();
 		String key = Conf.PERFIX + unid;
-
-		// String fiberId = util.hget(key, "fiber_unid");
-
-		// List<String> listStr = util.hmget(alarmKey, fiberId + "_StormCode" );
-		// ErrorCode errorCode = null;// 获取故障代码库数据 //findErrorCode(
-		// snapshot.getFiberUnid(), event.getCode()
-		// );
-		// if (listStr.size() > 0&&listStr.get(0)!=null) {
-		// errorCode = JsonUtils.deserialize(listStr.get(0), ErrorCode.class);
-		// } else {
-		// Map<String, String> map = setRedis();
-		// if (map.size() > 0) {
-		// util.del(alarmKey);
-		// util.hmset(alarmKey, map);
-		// }
-		// listStr = util.hmget(alarmKey, fiberId + "_" + event.getCode());
-		// errorCode = JsonUtils.deserialize(listStr.get(0), ErrorCode.class);
-		// }
+		Date now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(date);
+		now.setMonth(2);
 		String domainId = util.hget(key, "domain_unid");
 		try {
 			// connection = jdbc.getConnection();
-			String sql = "insert into sensor.ANA_VEHICLE_EVENT_" + DEFAULT_DATE.format(new Date())
+			String sql = "insert into sensor.ANA_VEHICLE_EVENT_" + DEFAULT_DATE.format(now)
 					+ "(UNID,ENTITY_UNID,DOMAIN_UNID,SUMMARY,EVENT_TYPE,LAT_D,LON_D,CONTEXT,LEVEL,ERROR_CODE) values(?,?,?,?,?,?,?,?,?,?)";
 
 			List<Object> params = new ArrayList<Object>();
@@ -411,69 +365,24 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 			params.add(lat);
 			params.add(lng);
 			params.add("");
-			params.add(0);
+			params.add(level!=""?level:0);
 			params.add("");
 
 			int aiid = jdbcUtils.insertByPreparedStatement(sql, params);
-
 			util.hset(aiid_key + unid, "StormCode", String.valueOf(aiid));
-			util.hset(aiid_key + unid, "beginTime", DEFAULT_DATE.format(new Date()));
-			// util.hset(aiid_key + unid, "beginTime", String.valueOf(aiid));
-			// PreparedStatement pstmt = connection.prepareStatement( sql,
-			// Statement.RETURN_GENERATED_KEYS );
-			// pstmt.setString( 1, UNID.getUnid() );
-			// pstmt.setString( 2, unid );
-			// pstmt.setString( 3, snapshot.getEntity().getDomainUnid() );
-			// pstmt.setString( 4, errorCode != null ? errorCode.getName() : ""
-			// );
-			// pstmt.setString( 5, eventType );
-			// pstmt.setDouble( 6, snapshot.getLatitudeDeviated() );
-			// pstmt.setDouble( 7, snapshot.getLongitudeDeviated() );
-			// pstmt.setString( 8, event.getHex() );// TODO
-			// pstmt.setInt( 9, errorCode != null ? errorCode.getLevel() : 0 );
-			// pstmt.setString( 10, event.getCode() );// TODO
-			//
-			// //((Object) LOG).fine( "insert event: " + pstmt.toString() );
-			// pstmt.execute();
-			// ResultSet rs = pstmt.getGeneratedKeys();
-			// if (rs.next())
-			// {
-			// int aiid = rs.getInt( 1 );
-			// LOG.info( "alert id:" + aiid );
-			// AlertEvent alert = new AlertEvent();
-			// alert.setAiid( aiid );
-			// alert.setDatimeBegin( DateHelper.getDateYYYY_MM_DD() );
-			// alert.setEntityUnid( unid );
-			// alert.setEventType( Event.EVENT_ALERT );
-			// alert.setTag( event.getCode() );
-			// String alertKey = unid + "_" + aiid;
-			// addEvent( snapshot, alert );
-			// }
-			// pstmt.close();
+			util.hset(aiid_key + unid, "beginTime", DEFAULT_DATE.format(now));
+
 		} catch (SQLException e) {
 			// LOG.severe( "get connection锛� " + e.getLocalizedMessage() );
 		} finally {
 			/// closeConnection( connection );
 			// jdbc.releaseConn();
 		}
-
-		// long alertCount = 0;
-		// ShardedJedis redis = REDIS_POOL.getResource();
-		// if (redis != null)
-		// {
-		// final String alertCounterKey = ALERT_COUNTER_KEY_PREFIX + unid;
-		// alertCount = redis.incr( alertCounterKey );
-		// String redisKey = PREFIX_VEHICLE + unid;
-		// redis.hset( redisKey, KEY_LEVEL, "" + (errorCode != null ?
-		// errorCode.getLevel() : 5) );
-		// redis.close();
-		// }
-
 		StringBuilder update = new StringBuilder();
 		update.append("update sensor.ANA_SNAPSHOT set DATIME_ALERT=");
 		update.append("'").append(date).append("'");
 		update.append(",COUNT_ALERT=").append(1);
-		update.append(",LEVEL_ALERT=").append((0));
+		update.append(",LEVEL_ALERT=").append(level!=""?level:0);
 		// update.append(",NODE_UNID='").append("").append("'");
 		update.append(" where UNID='").append(unid).append("'");
 		try {
@@ -482,7 +391,7 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		// DBHelper.commitSQL( update.toString() );
+
 	}
 
 }

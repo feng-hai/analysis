@@ -78,7 +78,7 @@ public class Conf {
 	/**
 	* @Fields VEHICLE_STATUS : 定义车辆状态判断条件，在redis中存储的前缀
 	*/ 
-	public static final String VEHICLE_CONDITION_STATUS = "VEHICLE_STATUS_STATE_NEW:";
+	public static final String VEHICLE_CONDITION_STATUS = "VEHICLE_STATUS_STATE:";
 	
 	/**
 	* @Fields VEHICLE_CONDITION_CHARGE : 车辆充电的判断条件，存储key

@@ -34,13 +34,13 @@ public class VehicleStatusBean implements Serializable {
 	private Integer STATUS=0;
 	private String FIBER_UNID="";
 	private String REMARKS="";
-	private String ALARM_LEVEL="";
+	private Integer ALARM_LEVEL=0;
 	private String ALARM_NAME="";
-	public String getALARM_LEVEL() {
+	public Integer getALARM_LEVEL() {
 		return ALARM_LEVEL;
 	}
 
-	public void setALARM_LEVEL(String aLARM_LEVEL) {
+	public void setALARM_LEVEL(Integer aLARM_LEVEL) {
 		ALARM_LEVEL = aLARM_LEVEL;
 	}
 

@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.storm.trident.operation.TridentCollector;
 import org.apache.storm.trident.operation.TridentOperationContext;
@@ -39,7 +40,7 @@ public class HBaseVehicleUpdate extends BaseStateUpdater<HBaseState> {
 
 	@Override
 	public void prepare(Map conf, TridentOperationContext context) {
-		lastVehicles = new HashMap<String, VehicleStatisticBean>();
+		lastVehicles = new ConcurrentHashMap <String, VehicleStatisticBean>();
 		lastTime = System.currentTimeMillis();
 	}
 
@@ -67,9 +68,7 @@ public class HBaseVehicleUpdate extends BaseStateUpdater<HBaseState> {
 				vehicle.setWorkTimeDateTime_temp(vehicle.getWorkTimeDateTime_temp()+vehicle_temp.getWorkTimeDateTime_temp());
 				lastVehicles.replace(key, vehicle);
 			} else {
-
 				lastVehicles.put(key, vehicle);
-
 			}
 			// vehicles.add(vehicle);
 		}

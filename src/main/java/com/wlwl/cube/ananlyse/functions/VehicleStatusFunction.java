@@ -17,6 +17,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.storm.trident.operation.BaseFunction;
 import org.apache.storm.trident.operation.TridentCollector;
 import org.apache.storm.trident.operation.TridentOperationContext;
@@ -86,12 +88,14 @@ public class VehicleStatusFunction extends BaseFunction {
 
 		String device = tuple.getStringByField("deviceId");
 		try {
+			//synchronized(this) { 
 			// 定时更新判断条件
-			updateCondition(device);
-			// 定时更新在线状态
-			updateNoOnline();
-			// 更新车辆在线状态
-			updateVehicleStatus(omok, device);
+				updateCondition(device);
+				// 定时更新在线状态
+				updateNoOnline();
+				// 更新车辆在线状态
+				updateVehicleStatus(omok, device);
+			//}
 
 		} catch (Exception e) {
 
@@ -177,6 +181,8 @@ public class VehicleStatusFunction extends BaseFunction {
 
 		String id = Conf.PERFIX + device;
 
+		
+		util.del(Conf.VEHICLE_CONDITION_STATUS+"*");
 		// 從redis中獲取數據
 
 		Map<String, String> map = util.hgetall(vehicleStatus);
@@ -203,10 +209,8 @@ public class VehicleStatusFunction extends BaseFunction {
 				if (statusBean != null) {
 					// 根据key获取数据值
 					Pair pair = omok.getPairByCode(statusBean.getCODE());
-
 					if (pair != null) {
 						String value = pair.getValue();
-
 						if (value != null) {
 							Boolean isTrue = statusBean.checkStatus(value);
 							if (isTrue) {
@@ -265,9 +269,7 @@ public class VehicleStatusFunction extends BaseFunction {
 		//LOG.error("数据字典id" + fiber_unid);
 		params.add(fiber_unid);
 		List<VehicleStatusBean> list = new ArrayList<VehicleStatusBean>();
-
 		if (fiber_unid != null) {
-
 			try {
 				jdbcUtils = SingletonJDBC.getJDBC();
 				list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);
@@ -276,7 +278,7 @@ public class VehicleStatusFunction extends BaseFunction {
 				e.printStackTrace();
 			}
 		}
-		Map<String, String> map = new HashMap<String, String>();
+		Map<String, String> map = new ConcurrentHashMap<String, String>();
 
 		for (VehicleStatusBean vsbean : list) {
 			map.put(vsbean.getStatus().toString(), JsonUtils.serialize(vsbean));
@@ -300,12 +302,12 @@ public class VehicleStatusFunction extends BaseFunction {
 				if (new Date().getTime() - StateUntils.strToDate(time).getTime() > 1000 * 60 * 1) {
 					util.hset(str, Conf.ACTIVE_STATUS, "0");
 					String unid = util.hget(str, "unid");
-					alertEnd(unid);
+					//alertEnd(unid);
 				}
 			} else {// 如果时间不存在
 				util.hset(str, Conf.ACTIVE_STATUS, "0");
 				String unid = util.hget(str, "unid");
-				alertEnd(unid);
+				//alertEnd(unid);
 			}
 			// }
 		}

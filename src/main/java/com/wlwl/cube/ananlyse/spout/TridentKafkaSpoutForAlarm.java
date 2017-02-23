@@ -41,6 +41,8 @@ import com.wlwl.cube.ananlyse.functions.VehicleChargeFunction;
 import com.wlwl.cube.ananlyse.functions.VehicleStatusFunction;
 import com.wlwl.cube.hbase.HBaseQueryVehicleFactory;
 import com.wlwl.cube.hbase.HBaseVehicleUpdate;
+import com.wlwl.cube.hbase.QueryVehiclesAlarmFactory;
+import com.wlwl.cube.hbase.VehicleAlarmUpdate;
 import com.wlwl.cube.redis.QueryVehiclesFactory;
 import com.wlwl.cube.redis.RedisUpdate;
 
@@ -106,7 +108,7 @@ public class TridentKafkaSpoutForAlarm {
 		
 				.each(new Fields("deviceId","vehicle"), new VehicleAlarmFetchFunction(), new Fields("vehicleInfo"))
 				
-				.partitionPersist(new QueryVehiclesFactory(), new Fields("vehicleInfo"), new RedisUpdate());
+				.partitionPersist(new QueryVehiclesAlarmFactory(), new Fields("vehicleInfo"), new VehicleAlarmUpdate());
 
 		return tridentTopology.build();
 	}

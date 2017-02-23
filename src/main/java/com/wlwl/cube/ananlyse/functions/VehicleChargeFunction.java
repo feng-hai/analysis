@@ -337,7 +337,7 @@ public class VehicleChargeFunction extends BaseFunction {
 	 *         车辆唯一标识 @return void 返回类型 @throws
 	 */
 	private void updateChargeConfig() {
-
+		
 		long currentTime = System.currentTimeMillis();
 		if (currentTime - lastTimeCharge > 1000 * 60 * 5) {
 			lastTimeCharge=currentTime;
@@ -366,7 +366,7 @@ public class VehicleChargeFunction extends BaseFunction {
 	 */
 	private Map<String, String> setRedis() {
 
-		String sql = "SELECT code,option,value,VALUE_LAST ,status,FIBER_UNID  FROM cube.PDA_VEHICLE_DETAIL where type=1 and status=3";
+		String sql = "SELECT code,option,value,VALUE_LAST ,status,FIBER_UNID  FROM cube.PDA_VEHICLE_DETAIL where type=1 and status=3 and flag_del=0 order by INX desc";
 
 		List<Object> params = new ArrayList<Object>();
 

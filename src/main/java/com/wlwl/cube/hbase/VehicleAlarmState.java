@@ -56,11 +56,16 @@ public class VehicleAlarmState implements State {
 	}
 
 	public void setVehicleBulk(List<VehicleAlarmBean> alarmList) {
+		System.out.println("報警保持");
 		for (VehicleAlarmBean alarm : alarmList) {
-			if (alarm.getIsBegin()) {
+			try {
+				if (alarm.getIsBegin()) {
 					alertBegin(alarm);
-			} else {
-				alertEnd(alarm);
+				} else {
+					alertEnd(alarm);
+				}
+			} catch (Exception ex) {
+				System.out.println(ex.getMessage());
 			}
 		}
 	}
@@ -86,7 +91,7 @@ public class VehicleAlarmState implements State {
 
 	}
 
-	private void alertBegin(VehicleAlarmBean alarm)  {
+	private void alertBegin(VehicleAlarmBean alarm) {
 
 		try {
 			// connection = jdbc.getConnection();

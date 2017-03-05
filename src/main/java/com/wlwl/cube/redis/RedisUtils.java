@@ -718,6 +718,7 @@ public class RedisUtils {
 		try {
 			jedis = pool.getResource();
 			res = jedis.hmset(key, hash);
+			
 		} catch (Exception e) {
 			jedis.close();
 			e.printStackTrace();

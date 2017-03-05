@@ -32,6 +32,8 @@ import org.apache.storm.topology.TopologyBuilder;
 
 import org.apache.storm.tuple.Fields;
 
+import com.wlwl.cube.analyse.bean.VehicleStatusBean;
+import com.wlwl.cube.analyse.common.Conf;
 import com.wlwl.cube.ananlyse.functions.CreateVehicleModelFunction;
 import com.wlwl.cube.ananlyse.functions.DeviceIDFunction;
 import com.wlwl.cube.ananlyse.functions.SaveValueToHBaseFunction;
@@ -39,8 +41,15 @@ import com.wlwl.cube.ananlyse.functions.SaveValueToRedisFunction;
 import com.wlwl.cube.ananlyse.functions.VehicleAlarmFetchFunction;
 import com.wlwl.cube.ananlyse.functions.VehicleChargeFunction;
 import com.wlwl.cube.ananlyse.functions.VehicleStatusFunction;
+import com.wlwl.cube.ananlyse.state.JsonUtils;
+import com.wlwl.cube.ananlyse.state.query.LocationDB;
+import com.wlwl.cube.ananlyse.state.query.LocationDBFactory;
+import com.wlwl.cube.ananlyse.state.query.LocationUpdater;
+import com.wlwl.cube.ananlyse.state.query.QueryLocation;
 import com.wlwl.cube.hbase.HBaseQueryVehicleFactory;
 import com.wlwl.cube.hbase.HBaseVehicleUpdate;
+import com.wlwl.cube.mysql.JdbcUtils;
+import com.wlwl.cube.mysql.SingletonJDBC;
 import com.wlwl.cube.redis.QueryVehiclesFactory;
 import com.wlwl.cube.redis.RedisUpdate;
 
@@ -52,11 +61,17 @@ import org.apache.storm.kafka.bolt.mapper.FieldNameBasedTupleToKafkaMapper;
 import org.apache.storm.kafka.bolt.selector.DefaultTopicSelector;
 import org.apache.storm.kafka.trident.TransactionalTridentKafkaSpout;
 import org.apache.storm.kafka.trident.TridentKafkaConfig;
+import org.apache.storm.trident.TridentState;
 import org.apache.storm.trident.TridentTopology;
 
 import org.apache.storm.trident.testing.MemoryMapState;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TridentKafkaSpoutForVehiceStatus {
 
@@ -73,7 +88,7 @@ public class TridentKafkaSpoutForVehiceStatus {
 
 	public TransactionalTridentKafkaSpout createKafkaSpout() {
 		ZkHosts hosts = new ZkHosts(zkUrl);
-		
+
 		TridentKafkaConfig config = new TridentKafkaConfig(hosts, "pairs_up", "vehicleStatus02");
 		config.scheme = new SchemeAsMultiScheme(new StringScheme());
 		// Consume new data from the topic
@@ -103,14 +118,19 @@ public class TridentKafkaSpoutForVehiceStatus {
 		TridentTopology tridentTopology = new TridentTopology();
 		// addDRPCStream(tridentTopology, addTridentState(tridentTopology),
 		// drpc);
+		//从事数据库中获取数据
+		Map<String, List<VehicleStatusBean>> statusMap=	loadData();
+		System.out.println("数据加载成功"+statusMap.size());
 
-		tridentTopology.newStream("spoutVehicleStatus", createKafkaSpout()).parallelismHint(4)
+		tridentTopology.newStream("spoutVehicleStatus", createKafkaSpout()).parallelismHint(5)
 				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(2)
 				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId")).parallelismHint(2)
 				.partitionBy(new Fields("deviceId")).parallelismHint(2)
-				.each(new Fields("deviceId", "vehicle"), new VehicleStatusFunction(), new Fields("vehicleInfo")).parallelismHint(2)
-				.partitionPersist(new QueryVehiclesFactory(), new Fields("vehicleInfo"), new RedisUpdate()).parallelismHint(2);
-		
+				// .each(new Fields("deviceId", "vehicle"), new
+				// VehicleStatusFunction(), new
+				// Fields("vehicleInfo")).parallelismHint(2)
+				.partitionPersist(new LocationDBFactory(statusMap), new Fields("vehicle"), new LocationUpdater())
+				.parallelismHint(10);
 
 		return tridentTopology.build();
 	}
@@ -152,6 +172,7 @@ public class TridentKafkaSpoutForVehiceStatus {
 	}
 
 	/**
+	 * 
 	 * Returns the storm config for the topology that publishes sentences to
 	 * kafka "test" topic using a kafka bolt. The KAFKA_BROKER_PROPERTIES is
 	 * needed for the KafkaBolt.
@@ -160,13 +181,43 @@ public class TridentKafkaSpoutForVehiceStatus {
 	 */
 	public Properties getProducerConfig() {
 		Properties props = new Properties();
-
 		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerUrl);
 		props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
 		props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
 				"org.apache.kafka.common.serialization.StringSerializer");
 		props.put(ProducerConfig.CLIENT_ID_CONFIG, "storm-kafka-producer");
 		return props;
+	}
+
+	// /**
+	// * 
+	// * 加载数据库中数据，安装数据字典存储
+	// */
+	private Map<String, List<VehicleStatusBean>> loadData() {
+		String sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS,ALARM_LEVEL,ALARM_NAME,fiber_unid  FROM  cube.PDA_CUSTOM_SETUP where type=1 and flag_del=0 order by INX desc";
+		List<Object> params = new CopyOnWriteArrayList<Object>();
+		List<VehicleStatusBean> list = null;
+		try {
+			JdbcUtils jdbcUtils = SingletonJDBC.getJDBC();
+			list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		Map<String, List<VehicleStatusBean>> map = new ConcurrentHashMap<>();
+		for (VehicleStatusBean vsbean : list) {
+			if (!map.containsKey(vsbean.getFIBER_UNID())) {
+				List<VehicleStatusBean> temp = new ArrayList<VehicleStatusBean>();
+				temp.add(vsbean);
+				map.put(vsbean.getFIBER_UNID(), temp);
+			} else {
+				List<VehicleStatusBean> temp = map.get(vsbean.getFIBER_UNID());
+				temp.add(vsbean);
+				map.replace(vsbean.getFIBER_UNID(), temp);
+			}
+		}
+		return map;
+
 	}
 
 }

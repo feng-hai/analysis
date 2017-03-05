@@ -11,6 +11,8 @@ package com.wlwl.cube.ananlyse.state;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.List;
+
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
@@ -21,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.wlwl.cube.analyse.bean.VehicleStatusBean;
 
 /**
 * @ClassName: JsonUtils
@@ -92,5 +95,19 @@ public class JsonUtils {
 	            logger.error("IOException when deserialize json", e);  
 	        }  
 	        return null;  
-	    }  
+	    }
+
+		public static List<VehicleStatusBean> mapperObject(String string,
+				org.apache.htrace.fasterxml.jackson.core.type.TypeReference<List<VehicleStatusBean>> typeReference) {
+			 ObjectMapper mapper = new ObjectMapper();
+		        //mapper.enableDefaultTyping();
+		        try {
+		            return mapper.readValue(string, new TypeReference<List<VehicleStatusBean>>() {});
+		        } catch (IOException e) {
+		            e.printStackTrace();
+		            return null;
+		        }
+			
+		}
+
 }

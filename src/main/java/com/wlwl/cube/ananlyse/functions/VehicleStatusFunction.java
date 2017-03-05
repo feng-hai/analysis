@@ -71,7 +71,7 @@ public class VehicleStatusFunction extends BaseFunction {
 	@Override
 	public void cleanup() {
 
-		jdbcUtils.releaseConn();
+		//jdbcUtils.releaseConn();
 	}
 	/*
 	 * (non-Javadoc)
@@ -88,14 +88,16 @@ public class VehicleStatusFunction extends BaseFunction {
 
 		String device = tuple.getStringByField("deviceId");
 		try {
-			//synchronized(this) { 
+		
+			collector.emit(new Values(omok));
+			// 更新车辆在线状态
+			updateVehicleStatus(omok, device);
 			// 定时更新判断条件
-				updateCondition(device);
-				// 定时更新在线状态
-				updateNoOnline();
-				// 更新车辆在线状态
-				updateVehicleStatus(omok, device);
-			//}
+			updateCondition(device);
+			 //定时更新在线状态
+			updateNoOnline();
+				
+			
 
 		} catch (Exception e) {
 
@@ -106,7 +108,7 @@ public class VehicleStatusFunction extends BaseFunction {
 
 			e.printStackTrace();
 		} finally {
-			collector.emit(new Values(omok));
+			
 		}
 	}
 
@@ -115,16 +117,16 @@ public class VehicleStatusFunction extends BaseFunction {
 	 *         设定文件 @return void 返回类型 @throws
 	 */
 	private void updateCondition(String device) {
-		String timekey = Conf.STORM_TIMER + device;
-		String timer = util.hget(timekey, Conf.ACTIVE_CONDITION_TIMER);
+		String timekey = Conf.STORM_TIMER+"status" + device;
+		String timer = util.hget(timekey, Conf.ACTIVE_CONDITION_TIMER+"status");
 		if (timer != null) {
 			Date date = StateUntils.strToDate(timer);
 			if (date != null) {
 				long m = new Date().getTime() - date.getTime();
 				if (m > 1000 * 60 * 2) {
-					util.hset(timekey, Conf.ACTIVE_CONDITION_TIMER, StateUntils.formate(new Date()));
+					util.hset(timekey, Conf.ACTIVE_CONDITION_TIMER+"status", StateUntils.formate(new Date()));
 					// 更新数据
-					String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS + device;
+					String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS+"status" + device;
 					Map<String, String> map = setRedis(device);
 					if (map.size() > 0) {
 						util.del(vehicleStatus);
@@ -132,11 +134,11 @@ public class VehicleStatusFunction extends BaseFunction {
 					}
 				}
 			} else {
-				util.hset(timekey, Conf.ACTIVE_CONDITION_TIMER, StateUntils.formate(new Date()));
+				util.hset(timekey, Conf.ACTIVE_CONDITION_TIMER+"status", StateUntils.formate(new Date()));
 			}
 
 		} else {
-			util.hset(timekey, Conf.ACTIVE_CONDITION_TIMER, StateUntils.formate(new Date()));
+			util.hset(timekey, Conf.ACTIVE_CONDITION_TIMER+"status", StateUntils.formate(new Date()));
 		}
 
 	}
@@ -145,25 +147,25 @@ public class VehicleStatusFunction extends BaseFunction {
 	 * 检查5分钟没有上线的车辆，并把车辆设置为离线状态
 	 */
 	private void updateNoOnline() {
-		String timekey = Conf.STORM_TIMER + "ONLINETIER";
-		String timer = util.hget(timekey, Conf.ACTIVE_ONLINE_TIMER);
+		String timekey = Conf.STORM_TIMER+"status" + "ONLINETIER";
+		String timer = util.hget(timekey, Conf.ACTIVE_ONLINE_TIMER+"status");
 		if (timer != null) {
 			Date date = StateUntils.strToDate(timer);
 			if (date != null) {
 				long m = new Date().getTime() - date.getTime();
 				if (m > 1000 * 60 * 5) {
-					util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER, StateUntils.formate(new Date()));
+					util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER+"status", StateUntils.formate(new Date()));
 					// 更新数据
 					checkOnLine();
 				}
 			} else {
-				checkOnLine();
-				util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER, StateUntils.formate(new Date()));
+				//checkOnLine();
+				util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER+"status", StateUntils.formate(new Date()));
 			}
 
 		} else {
-			checkOnLine();
-			util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER, StateUntils.formate(new Date()));
+			//checkOnLine();
+			util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER+"status", StateUntils.formate(new Date()));
 		}
 
 	}
@@ -176,13 +178,14 @@ public class VehicleStatusFunction extends BaseFunction {
 	 */
 	private void updateVehicleStatus(ObjectModelOfKafka omok, String device) {
 
-		String timekey = Conf.STORM_TIMER + "ONLINETIERDEFAULT";
-		String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS + device;
+		String timekey = Conf.STORM_TIMER+"status" + "ONLINETIERDEFAULT";
+		String vehicleStatus = Conf.VEHICLE_CONDITION_STATUS +"status"+ device;
 
 		String id = Conf.PERFIX + device;
 
-		
-		util.del(Conf.VEHICLE_CONDITION_STATUS+"*");
+		//需要删除
+		//util.del(Conf.VEHICLE_CONDITION_STATUS+"*");
+		//util.del(vehicleStatus);
 		// 從redis中獲取數據
 
 		Map<String, String> map = util.hgetall(vehicleStatus);

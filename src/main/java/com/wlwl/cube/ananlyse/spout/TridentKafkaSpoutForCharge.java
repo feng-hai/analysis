@@ -39,6 +39,8 @@ import com.wlwl.cube.ananlyse.functions.SaveValueToRedisFunction;
 import com.wlwl.cube.ananlyse.functions.VehicleAlarmFetchFunction;
 import com.wlwl.cube.ananlyse.functions.VehicleChargeFunction;
 import com.wlwl.cube.ananlyse.functions.VehicleStatusFunction;
+import com.wlwl.cube.ananlyse.state.charge.LocationDBFactory;
+import com.wlwl.cube.ananlyse.state.charge.LocationUpdater;
 import com.wlwl.cube.hbase.HBaseQueryVehicleFactory;
 import com.wlwl.cube.hbase.HBaseVehicleUpdate;
 import com.wlwl.cube.redis.QueryVehiclesFactory;
@@ -100,8 +102,8 @@ public class TridentKafkaSpoutForCharge {
 				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(1)
 				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId"))
 				.partitionBy(new Fields("deviceId"))
-				.each(new Fields("vehicle"), new VehicleChargeFunction(), new Fields("vehicleInfo"))
-		        .partitionPersist(new QueryVehiclesFactory(), new Fields("vehicleInfo"), new RedisUpdate());
+				//.each(new Fields("vehicle"), new VehicleChargeFunction(), new Fields("vehicleInfo"))
+		        .partitionPersist(new LocationDBFactory(), new Fields("vehicle"), new LocationUpdater());
 		
 
 		return tridentTopology.build();

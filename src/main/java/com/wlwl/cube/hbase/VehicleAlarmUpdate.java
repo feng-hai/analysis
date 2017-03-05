@@ -33,6 +33,10 @@ import com.wlwl.cube.analyse.bean.VehicleAlarmBean;
  */
 public class VehicleAlarmUpdate extends BaseStateUpdater<VehicleAlarmState> {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	BlockingQueue<List<VehicleAlarmBean>> lastQueue;
 	private long lastTime;
 
@@ -56,32 +60,34 @@ public class VehicleAlarmUpdate extends BaseStateUpdater<VehicleAlarmState> {
 		long currentTime = System.currentTimeMillis();
 		// List<VehicleStatisticBean> vehicles = new
 		// ArrayList<VehicleStatisticBean>();
+		System.out.println("提交数据llll ");
 		for (TridentTuple t : tuples) {
 			@SuppressWarnings("unchecked")
 			List<VehicleAlarmBean> alarmList = (List<VehicleAlarmBean>) t.getValueByField("vehicleInfo");
-			if (alarmList.size() > 0) {
-				try {
-					lastQueue.put(alarmList);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
+			state.setVehicleBulk(alarmList);
+		
+//				try {
+//					//lastQueue.put(alarmList);
+//				} catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+			
 		}
-		if (currentTime >= lastTime + 1000 * 60 * 5 || lastQueue.size() > 0) {
-			lastTime = currentTime;
-			while (lastQueue.size() > 0) {
-				List<VehicleAlarmBean> alarmList;
-				try {
-					alarmList = lastQueue.take();
-					state.setVehicleBulk(alarmList);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				
-			}
-		}
+//		if (currentTime >= lastTime + 1000 * 60 * 5 || lastQueue.size() > 0) {
+//			lastTime = currentTime;
+//			//while (lastQueue.size() > 0) {
+//				
+//				try {
+//					List<VehicleAlarmBean>  alarmList = lastQueue.take();
+//					state.setVehicleBulk(alarmList);
+//				} catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//				
+//			//}
+//		}
 	}
 
 }

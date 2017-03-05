@@ -111,8 +111,8 @@ public class TridentKafkaTopologyForVehicleStatus {
 		if (args.length == 1) {
 			Config conf = new Config();
 			conf.setMaxSpoutPending(20);
-			conf.setMessageTimeoutSecs(160);
-			conf.setNumWorkers(2);
+			conf.setMessageTimeoutSecs(260);
+			conf.setNumWorkers(1);
 			//conf.setDebug(true);
 			// submit the consumer topology.
 			StormSubmitter.submitTopology(args[0] + "-consumer", conf, kafkaInstance.buildConsumerTopology(null));

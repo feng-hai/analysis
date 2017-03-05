@@ -80,7 +80,7 @@ public class ObjectModelOfKafka implements Serializable {
 	}
 
 	/**
-	 * @Title: getDevice @Description: TODO获取当前信息的终端id @param @return
+	 * @Title: getDevice @Description: TODO获取当前信息的车辆id @param @return
 	 *         设定文件 @return Pair 返回类型 @throws
 	 */
 	public Pair getVehicle_UNID() {

@@ -37,10 +37,16 @@ public class VehicleAlarmStatus {
 
 	public List<VehicleAlarmBean> getAlarmBean() {
 
-		List<VehicleAlarmBean> alarmList = new CopyOnWriteArrayList<VehicleAlarmBean>();
+		List<VehicleAlarmBean> alarmList = new ArrayList<VehicleAlarmBean>();
 		try {
 			Pair vehiclePair = this.omokObject.getVehicle_UNID();
+			if (vehiclePair == null) {
+				return alarmList;
+			}
 			String unid = vehiclePair.getValue();
+			if (unid == null) {
+				return alarmList;
+			}
 			String VehilceKey = "BIG_VEHICLE:" + unid;
 			List<String> lastValue = util.hmget(VehilceKey, "LAT_D", "LON_D", "domain_unid", "fiber_unid");
 			if (lastValue != null && lastValue.size() == 4) {
@@ -53,22 +59,35 @@ public class VehicleAlarmStatus {
 					if (this.statusMap.containsKey(fiber_unid)) {
 						List<VehicleStatusBean> statusList = this.statusMap.get(fiber_unid);
 						String date = this.omokObject.getDATIME_RX();
-						if(date==null)
-						{
+						if (date == null) {
 							return alarmList;
 						}
 						for (VehicleStatusBean statusBean : statusList) {
 							Pair pair = this.omokObject.getPairByCode(statusBean.getCODE());
+							if (pair == null) {
+								continue;
+							}
 							if (pair != null) {
 								String value = pair.getValue();
-								if(value==null)
-								{
+								if (value == null) {
 									continue;
 								}
 								Boolean isTrue = statusBean.checkStatus(value);
 								String code = statusBean.getCODE();
+								if(code==null)
+								{
+									continue;
+								}
 								String errorName = statusBean.getALARM_NAME();
+								if(errorName==null)
+								{
+									continue;
+								}
 								Integer level = statusBean.getALARM_LEVEL();
+								if(level==null)
+								{
+									continue;
+								}
 								VehicleAlarmBean alarm = new VehicleAlarmBean();
 								alarm.setVehicleUnid(unid);
 								alarm.setDomainId(domainId);
@@ -80,12 +99,12 @@ public class VehicleAlarmStatus {
 								alarm.setCode(code);
 								// 设置表后缀如：201702
 								String[] dataArray = date.split("-");
-								if(dataArray.length<2)
-								{
+								if (dataArray.length <2) {
 									continue;
 								}
 								alarm.setTableSuf(dataArray[0] + dataArray[1]);
 								if (isTrue && statusBean.getStatus() == 1) {
+									
 									if (!alarmKeys.containsKey(aiid_key + unid + code + level)) {
 										alarm.setIsBegin(true);
 										alarm.setUnid(UNID.getUnid());
@@ -97,12 +116,16 @@ public class VehicleAlarmStatus {
 								} else {
 									if (alarmKeys.containsKey(aiid_key + unid + code + level)
 											&& alarmKeys.containsKey(aiid_key + unid + code + level + "suf")) {
-										alarm.setUnid(alarmKeys.get(aiid_key + unid + code + level));
-										alarm.setIsBegin(false);
-										alarm.setTableSuf(alarmKeys.get(aiid_key + unid + code + level + "suf"));
-										alarmList.add(alarm);
-										alarmKeys.remove(alarmKeys.get(aiid_key + unid + code + level));
-										alarmKeys.remove(alarmKeys.get(aiid_key + unid + code + level + "suf"));
+										String id = alarmKeys.get(aiid_key + unid + code + level);
+										String suf = alarmKeys.get(aiid_key + unid + code + level + "suf");
+										if (id != null && suf != null) {
+											alarm.setUnid(id);
+											alarm.setIsBegin(false);
+											alarm.setTableSuf(suf);
+											alarmList.add(alarm);
+											alarmKeys.remove(aiid_key + unid + code + level);
+											alarmKeys.remove(aiid_key + unid + code + level + "suf");
+										}
 									}
 								}
 							}

@@ -99,7 +99,7 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 
 		if (currentTime - lastTime > 1000 * 60 * 30) {
 			this.lastTime=currentTime;
-			loadData();
+			//loadData();
 		}
 
 	}

@@ -103,12 +103,12 @@ public class TridentKafkaSpoutForAlarm {
 		Map<String, List<VehicleStatusBean>> statusMap=	loadData();
 		System.out.println("报警数据加载成功"+statusMap.size());
 	
-		tridentTopology.newStream("spoutAlarm", createKafkaSpout()).parallelismHint(6)
+		tridentTopology.newStream("spoutAlarm", createKafkaSpout()).parallelismHint(4)
 				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(3)
 				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId")).parallelismHint(1)
 				.partitionBy(new Fields("deviceId")).parallelismHint(1)
 				//.stateQuery(state,new Fields("vehicle"), new QueryLocation(), new Fields("vehicleInfo"))
-				.each(new Fields("vehicle"), new VehicleAlarmFetchFunction(statusMap), new Fields("vehicleInfo"))
+				.each(new Fields("vehicle"), new VehicleAlarmFetchFunction(statusMap), new Fields("vehicleInfo")).parallelismHint(6)
 				.partitionPersist(new LocationDBFactory(), new Fields("vehicleInfo"), new LocationUpdater()).parallelismHint(10);
 
 		return tridentTopology.build();

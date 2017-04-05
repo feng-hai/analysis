@@ -446,7 +446,7 @@ public class LocationDB implements State {
 	 *            设定文件 @return void 返回类型 @throws
 	 * @throws ParseException 
 	 */
-	private void checkCharge(ObjectModelOfKafka vehicle) throws ParseException {
+	private void checkCharge(ObjectModelOfKafka vehicle) {
 
 		if(vehicle.getVehicle_UNID()==null)
 		{
@@ -457,7 +457,15 @@ public class LocationDB implements State {
 		// 保存到hbase中时间值
 		// vehicleObj.setWorkTimeDateTime_end(vehicle.getTIMESTAMP());
 		
-		Date datetime=DEFAULT_DATE_SIMPLEDATEFORMAT.parse(vehicle.getDATIME_RX());
+		Date datetime=vehicle.getTIMESTAMP();
+		//System.out.println(vehicle.getDATIME_RX());
+		try {
+			datetime = DEFAULT_DATE_SIMPLEDATEFORMAT.parse(vehicle.getDATIME_RX());
+		} catch (ParseException e1) {
+			// TODO Auto-generated catch block
+			//e1.printStackTrace();
+			System.out.println(vehicle.getDATIME_RX());
+		}
 
 		// redis 中保存充电状态的key
 		String id = PERFIX + vehicle.getVehicle_UNID().getValue() + "charge";

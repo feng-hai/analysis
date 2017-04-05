@@ -63,6 +63,7 @@ public class JdbcUtils {
 		try {
 			Class.forName(DRIVER);
 			System.out.println("数据库连接成功！");
+			getConnection();
 
 		} catch (Exception e) {
 
@@ -378,10 +379,23 @@ public class JdbcUtils {
 	/**
 	 * 释放数据库连接
 	 */
-//	public void releaseConn() {
-//		
-//		
-//	}
+	public void releaseConn() {
+		
+		try {
+			
+			
+			if(connection!=null&&!connection.isClosed())
+			{
+					connection.close();
+					connection=null;
+				
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
 
 	public void checkOnLine() {
 

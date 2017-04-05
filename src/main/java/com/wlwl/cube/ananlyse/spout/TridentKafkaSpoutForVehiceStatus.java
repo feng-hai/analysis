@@ -197,12 +197,15 @@ public class TridentKafkaSpoutForVehiceStatus {
 		String sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS,ALARM_LEVEL,ALARM_NAME,fiber_unid  FROM  cube.PDA_CUSTOM_SETUP where type=1 and flag_del=0 order by INX desc";
 		List<Object> params = new CopyOnWriteArrayList<Object>();
 		List<VehicleStatusBean> list = null;
+		JdbcUtils jdbcUtils = SingletonJDBC.getJDBC();
 		try {
-			JdbcUtils jdbcUtils = SingletonJDBC.getJDBC();
+			
 			list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}finally{
+			jdbcUtils.releaseConn();
 		}
 		Map<String, List<VehicleStatusBean>> map = new ConcurrentHashMap<>();
 		for (VehicleStatusBean vsbean : list) {

@@ -1,6 +1,7 @@
 package com.wlwl.cube.ananlyse.state.query;
 
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -443,8 +444,9 @@ public class LocationDB implements State {
 	 * @param
 	 * @param vehicle
 	 *            设定文件 @return void 返回类型 @throws
+	 * @throws ParseException 
 	 */
-	private void checkCharge(ObjectModelOfKafka vehicle) {
+	private void checkCharge(ObjectModelOfKafka vehicle) throws ParseException {
 
 		if(vehicle.getVehicle_UNID()==null)
 		{
@@ -454,6 +456,8 @@ public class LocationDB implements State {
 		vehicleObj.setVehicle_unid(vehicle.getVehicle_UNID().getValue());
 		// 保存到hbase中时间值
 		// vehicleObj.setWorkTimeDateTime_end(vehicle.getTIMESTAMP());
+		
+		Date datetime=DEFAULT_DATE_SIMPLEDATEFORMAT.parse(vehicle.getDATIME_RX());
 
 		// redis 中保存充电状态的key
 		String id = PERFIX + vehicle.getVehicle_UNID().getValue() + "charge";
@@ -462,7 +466,7 @@ public class LocationDB implements State {
 
 			Double chargeNum = 0.0;
 
-			util.set(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id, Long.toString(System.currentTimeMillis()));
+			util.set(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id, Long.toString(datetime.getTime()));
 			// lastTime = System.currentTimeMillis();
 			chargeNum = Double.parseDouble(vehicle.getInCharge().getValue());
 
@@ -477,7 +481,7 @@ public class LocationDB implements State {
 				// Date()) + str);
 				cbean = JsonUtils.deserialize(str, ChargeBean.class);
 
-				cbean.setEndDate(vehicle.getTIMESTAMP());
+				cbean.setEndDate(datetime);
 
 				if (Double.parseDouble(vehicle.getSOC().getValue()) > 0) {
 
@@ -501,9 +505,9 @@ public class LocationDB implements State {
 
 				cbean.setEndCharger(chargeNum);
 
-				cbean.setStartDate(vehicle.getTIMESTAMP());
+				cbean.setStartDate(datetime);
 
-				cbean.setEndDate(vehicle.getTIMESTAMP());
+				cbean.setEndDate(datetime);
 
 				cbean.setStartSOC(Double.parseDouble(vehicle.getSOC().getValue()));
 
@@ -534,8 +538,7 @@ public class LocationDB implements State {
 				return;
 			}
 			Long lastTime = Long.parseLong(time);
-			Long currentTime = System.currentTimeMillis();
-
+			Long currentTime = datetime.getTime();
 			// System.out.println((currentTime - lastTime)/60000);
 			if (currentTime - lastTime > 1000 * 60 * 5) {
 

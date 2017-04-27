@@ -73,7 +73,7 @@ public class LocationDB implements State {
 		for (ObjectModelOfKafka omok : vehicleIds) {
 			try {
 				checkCharge(omok);
-				//updateChargeConfig();
+				updateChargeConfig();
 			} catch (Exception ex) {
 				System.out.println(ex.getMessage());
 			}
@@ -182,7 +182,7 @@ public class LocationDB implements State {
 			Long currentTime = System.currentTimeMillis();
 
 			// System.out.println((currentTime - lastTime)/60000);
-			if (currentTime - lastTime > 1000 * 60 * 5) {
+			if (currentTime - lastTime > 1000 * 60 * 30) {
 
 				String str = util.hget(id, "charges");
 				// System.out.println(id + "结束充电-结束" + StateUntils.formate(new
@@ -326,7 +326,7 @@ public class LocationDB implements State {
 	private void updateChargeConfig() {
 
 		long currentTime = System.currentTimeMillis();
-		if (currentTime - lastTimeCharge > 1000 * 60 * 30) {
+		if (currentTime - lastTimeCharge > 1000 * 60 * 60*12) {
 			lastTimeCharge = currentTime;
 			String vehicleAlarm = Conf.VEHICLE_CONDITION_CHARGE + "config";
 

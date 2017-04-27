@@ -77,9 +77,9 @@ public class TridentKafkaSpoutForCharge {
 		TridentKafkaConfig config = new TridentKafkaConfig(hosts, topicId,"vehicleCharge");
 		config.scheme = new SchemeAsMultiScheme(new StringScheme());
 		// Consume new data from the topic
-		config.ignoreZkOffsets = true;
+		//config.ignoreZkOffsets = true;
 	
-		config.startOffsetTime =kafka.api.OffsetRequest.LatestTime(); // -2 从kafka头开始  -1 是从最新的开始 0 =无 从ZK开始 kafka.api.OffsetRequest.LatestTime();
+		//config.startOffsetTime =kafka.api.OffsetRequest.LatestTime(); // -2 从kafka头开始  -1 是从最新的开始 0 =无 从ZK开始 kafka.api.OffsetRequest.LatestTime();
 		
 		return new TransactionalTridentKafkaSpout(config);
 	}
@@ -98,12 +98,12 @@ public class TridentKafkaSpoutForCharge {
 		// addDRPCStream(tridentTopology, addTridentState(tridentTopology),
 		// drpc);
 
-		tridentTopology.newStream("spoutCharge", createKafkaSpout()).parallelismHint(1)
-				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(1)
-				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId"))
-				.partitionBy(new Fields("deviceId"))
+		tridentTopology.newStream("spoutCharge", createKafkaSpout()).parallelismHint(15)
+				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(2)
+				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId")).parallelismHint(2)
+				.partitionBy(new Fields("deviceId")).parallelismHint(2)
 				//.each(new Fields("vehicle"), new VehicleChargeFunction(), new Fields("vehicleInfo"))
-		        .partitionPersist(new LocationDBFactory(), new Fields("vehicle"), new LocationUpdater());
+		        .partitionPersist(new LocationDBFactory(), new Fields("vehicle"), new LocationUpdater()).parallelismHint(25);
 		
 
 		return tridentTopology.build();

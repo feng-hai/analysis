@@ -90,7 +90,7 @@ public class LocationDB implements State {
 				updateVehicleSatusNew(omok);
 				// updateVehicleStatus(omok, omok.getVehicle_UNID().getValue());
 				// 定时更新在线状态
-				checkCharge(omok);
+				//checkCharge(omok);
 				updateNoOnline();
 				if (currentTime - lastTime > 1000 * 60 *5) {
 					this.lastTime = currentTime;
@@ -548,7 +548,7 @@ public class LocationDB implements State {
 			Long lastTime = Long.parseLong(time);
 			Long currentTime = datetime.getTime();
 			// System.out.println((currentTime - lastTime)/60000);
-			if (currentTime - lastTime > 1000 * 60 * 5) {
+			if (currentTime - lastTime > 1000 * 60 * 30) {
 
 				String str = util.hget(id, "charges");
 				// System.out.println(id + "结束充电-结束" + StateUntils.formate(new

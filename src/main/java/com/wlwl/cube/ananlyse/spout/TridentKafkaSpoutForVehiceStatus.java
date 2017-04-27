@@ -94,7 +94,7 @@ public class TridentKafkaSpoutForVehiceStatus {
 		// Consume new data from the topic
 		config.ignoreZkOffsets = true;
 
-		config.startOffsetTime = kafka.api.OffsetRequest.LatestTime(); // -2
+		config.startOffsetTime =kafka.api.OffsetRequest.LatestTime(); // -2
 																		// 从kafka头开始
 																		// -1
 																		// 是从最新的开始
@@ -122,7 +122,7 @@ public class TridentKafkaSpoutForVehiceStatus {
 		Map<String, List<VehicleStatusBean>> statusMap=	loadData();
 		System.out.println("数据加载成功"+statusMap.size());
 
-		tridentTopology.newStream("spoutVehicleStatus", createKafkaSpout()).parallelismHint(5)
+		tridentTopology.newStream("spoutVehicleStatus", createKafkaSpout()).parallelismHint(15)
 				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(2)
 				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId")).parallelismHint(2)
 				.partitionBy(new Fields("deviceId")).parallelismHint(2)

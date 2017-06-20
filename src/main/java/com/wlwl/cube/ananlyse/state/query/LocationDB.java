@@ -90,7 +90,7 @@ public class LocationDB implements State {
 				updateVehicleSatusNew(omok);
 				// updateVehicleStatus(omok, omok.getVehicle_UNID().getValue());
 				// 定时更新在线状态
-				//checkCharge(omok);
+				checkCharge(omok);
 				updateNoOnline();
 				if (currentTime - lastTime > 1000 * 60 *5) {
 					this.lastTime = currentTime;
@@ -468,7 +468,7 @@ public class LocationDB implements State {
 		}
 
 		// redis 中保存充电状态的key
-		String id = PERFIX + vehicle.getVehicle_UNID().getValue() + "charge";
+		String id = PERFIX + vehicle.getVehicle_UNID().getValue() + "charges";
 
 		if (isCharge(vehicle)) {// 判断是否是充电状态
 

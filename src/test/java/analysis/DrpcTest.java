@@ -15,7 +15,9 @@ import java.util.Map;
 import org.apache.storm.Config;
 import org.apache.storm.utils.DRPCClient;
 
+import com.wlwl.cube.analyse.bean.ObjectModelOfKafka;
 import com.wlwl.cube.ananlyse.functions.VehicleAlarmFetchFunction;
+import com.wlwl.cube.ananlyse.state.JsonUtils;
 import com.wlwl.cube.redis.RedisUtils;
 import com.wlwl.cuble.analyse.storager.StoragerSingleton;
 
@@ -30,7 +32,8 @@ public class DrpcTest {
 
 	public static void main(String[] args) throws Exception {
 		
-//		RedisUtils redis=new RedisUtils();
+	
+		//		RedisUtils redis=new RedisUtils();
 //	
 //		List<String> keys=new ArrayList<String>();
 //		keys.add("BIG_VEHICLE:00331C16D968481DB24C879B6381358E");

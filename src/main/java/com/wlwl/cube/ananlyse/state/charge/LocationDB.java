@@ -1,5 +1,6 @@
 package com.wlwl.cube.ananlyse.state.charge;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.storm.trident.state.State;
 import org.slf4j.Logger;
@@ -49,15 +51,19 @@ public class LocationDB implements State {
 
 	private RedisUtils util = null;
 	private JdbcUtils jdbcUtils = null;
+	private Map<String, List<VehicleStatusBean>> statusData = null;
+	SimpleDateFormat DEFAULT_DATE_SIMPLEDATEFORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	// private Map<String, VehicleStatisticBean> lastCharges = null;
-	private long lastTimeCharge;
+	private long lastTime;
 
-	public LocationDB() {
-		util = RedisSingleton.instance();
+	public LocationDB(Map<String, List<VehicleStatusBean>> statusData ) {
+		 util = RedisSingleton.instance();
 		jdbcUtils = SingletonJDBC.getJDBC();
 		// lastCharges = new HashMap<String, VehicleStatisticBean>();
-		lastTimeCharge = System.currentTimeMillis();
+		//lastTimeCharge = System.currentTimeMillis();
+		this.statusData=statusData;
+		lastTime = System.currentTimeMillis();
 	}
 
 	public void beginCommit(Long txid) {
@@ -69,11 +75,14 @@ public class LocationDB implements State {
 	}
 
 	public void setLocationsBulk(List<ObjectModelOfKafka> vehicleIds) {
-
+		long currentTime = System.currentTimeMillis();
 		for (ObjectModelOfKafka omok : vehicleIds) {
 			try {
 				checkCharge(omok);
-				updateChargeConfig();
+				if (currentTime - lastTime > 1000 * 60 *5) {
+					this.lastTime = currentTime;
+					loadData();
+				}
 			} catch (Exception ex) {
 				System.out.println(ex.getMessage());
 			}
@@ -92,22 +101,39 @@ public class LocationDB implements State {
 	 * @param
 	 * @param vehicle
 	 *            设定文件 @return void 返回类型 @throws
+	 * @throws ParseException 
 	 */
 	private void checkCharge(ObjectModelOfKafka vehicle) {
 
+		if(vehicle.getVehicle_UNID()==null)
+		{
+			return;
+		}
 		VehicleStatisticBean vehicleObj = new VehicleStatisticBean();
 		vehicleObj.setVehicle_unid(vehicle.getVehicle_UNID().getValue());
 		// 保存到hbase中时间值
 		// vehicleObj.setWorkTimeDateTime_end(vehicle.getTIMESTAMP());
+		
+		Date datetime=vehicle.getTIMESTAMP();
+		//System.out.println(vehicle.getDATIME_RX());
+		try {
+			datetime = DEFAULT_DATE_SIMPLEDATEFORMAT.parse(vehicle.getDATIME_RX());
+		} catch (ParseException e1) {
+			// TODO Auto-generated catch block
+			//e1.printStackTrace();
+			System.out.println(vehicle.getDATIME_RX());
+		}
 
 		// redis 中保存充电状态的key
-		String id = PERFIX + vehicle.getVehicle_UNID().getValue() + "charge";
+		String id = PERFIX + vehicle.getVehicle_UNID().getValue() + "charges";
 
 		if (isCharge(vehicle)) {// 判断是否是充电状态
+			
+			System.out.println("充电状态");
 
 			Double chargeNum = 0.0;
 
-			util.set(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id, Long.toString(System.currentTimeMillis()));
+			util.set(Conf.STORM_TIMER + Conf.ACTIVE_CHARGE_TIMER + id, Long.toString(datetime.getTime()));
 			// lastTime = System.currentTimeMillis();
 			chargeNum = Double.parseDouble(vehicle.getInCharge().getValue());
 
@@ -115,14 +141,14 @@ public class LocationDB implements State {
 			ChargeBean cbean;
 
 			// 获取上一次保存的数据
+			util.del(id);
 			String str = util.hget(id, "charges");
 
 			if (str != null) {
-				// System.out.println(id + "继续充电" + StateUntils.formate(new
-				// Date()) + str);
+				 System.out.println(id + "继续充电" + StateUntils.formate(new Date()) + str);
 				cbean = JsonUtils.deserialize(str, ChargeBean.class);
 
-				cbean.setEndDate(vehicle.getTIMESTAMP());
+				cbean.setEndDate(datetime);
 
 				if (Double.parseDouble(vehicle.getSOC().getValue()) > 0) {
 
@@ -137,8 +163,7 @@ public class LocationDB implements State {
 
 			} else {
 
-				// System.out.println(id + "开始充电" + StateUntils.formate(new
-				// Date()) + str);
+				 System.out.println(id + "开始充电" + StateUntils.formate(new Date()) + str+vehicle.getDeviceId());
 
 				cbean = new ChargeBean();
 
@@ -146,9 +171,9 @@ public class LocationDB implements State {
 
 				cbean.setEndCharger(chargeNum);
 
-				cbean.setStartDate(vehicle.getTIMESTAMP());
+				cbean.setStartDate(datetime);
 
-				cbean.setEndDate(vehicle.getTIMESTAMP());
+				cbean.setEndDate(datetime);
 
 				cbean.setStartSOC(Double.parseDouble(vehicle.getSOC().getValue()));
 
@@ -168,6 +193,7 @@ public class LocationDB implements State {
 
 				HBaseUtils.insert(tableName_Charge, TimeBaseRowStrategy.getRowKeyFor2Hase(vehicleObj), family_charge,
 						"startSOC", cbean.getStartSOC().toString());
+				 System.out.println(id + "插入充电数据" + StateUntils.formate(new Date()) + str+vehicle.getDeviceId());
 
 			}
 			util.hset(id, "charges", JsonUtils.serialize(cbean));
@@ -179,14 +205,12 @@ public class LocationDB implements State {
 				return;
 			}
 			Long lastTime = Long.parseLong(time);
-			Long currentTime = System.currentTimeMillis();
-
+			Long currentTime = datetime.getTime();
 			// System.out.println((currentTime - lastTime)/60000);
 			if (currentTime - lastTime > 1000 * 60 * 30) {
 
 				String str = util.hget(id, "charges");
-				// System.out.println(id + "结束充电-结束" + StateUntils.formate(new
-				// Date()) + str);
+				 System.out.println(id + "结束充电-结束" + StateUntils.formate(new Date()) + str+vehicle.getDeviceId());
 
 				if (str != null) {
 
@@ -267,108 +291,77 @@ public class LocationDB implements State {
 	 * @param @return
 	 *            设定文件 @return Boolean 返回类型 @throws
 	 */
-	private Boolean isCharge(ObjectModelOfKafka vehicle) {
-		// String status = vehicle.getChargeStatus();
+	private Boolean isCharge(ObjectModelOfKafka omok) {
 
-		String vehicleCharge = Conf.VEHICLE_CONDITION_CHARGE + "config";// vehicle.getVehicle_UNID().getValue();
-		// 從redis中獲取數據
-
-		Map<String, String> map = util.hgetall(vehicleCharge);
-
-		if (map.size() == 0) {
-
-			// redis 中沒有數據，從數據庫中讀取並複製
-			map = setRedis();
-
-			if (map.size() > 0) {
-				util.hmset(vehicleCharge, map);
-			}
-		}
-		// System.out.println(map);
-
-		String id = Conf.PERFIX + vehicle.getVehicle_UNID().getValue();
-
+		String id = Conf.PERFIX + omok.getVehicle_UNID().getValue();
 		String fiber_unid = util.hget(id, "fiber_unid");
+		if(fiber_unid==null||fiber_unid.isEmpty())
+		{
+			return false;
+		}
+		if (this.statusData.containsKey(fiber_unid)) {
+			List<VehicleStatusBean> statusList = this.statusData.get(fiber_unid);
+			
+			for (VehicleStatusBean statusBean : statusList) {
+				if (statusBean.getStatus() == 3) {
+					Pair pair = omok.getPairByCode(statusBean.getCODE());
 
-		String valueStr = map.get(fiber_unid + "3");
+					if (pair != null) {
 
-		// System.out.println(valueStr);
+						String value = pair.getValue();
 
-		if (valueStr != null && valueStr != "") {
+						if (value != null && value != "") {
 
-			VehicleStatusBean statusBean = JsonUtils.deserialize(valueStr, VehicleStatusBean.class);
+							Boolean isTrue = statusBean.checkStatus(value);
+							if (isTrue) {
 
-			Pair pair = vehicle.getPairByCode(statusBean.getCODE());
+								return isTrue;
+							}
 
-			if (pair != null) {
-
-				String value = pair.getValue();
-
-				if (value != null && value != "") {
-
-					Boolean isTrue = statusBean.checkStatus(value);
-					if (isTrue) {
-
-						return isTrue;
+						}
 					}
-
 				}
+
 			}
 		}
 		return false;
 
 	}
 
-	/**
-	 * @Title: updateChargeConfig @Description: 更新充电配置 @param @param device
-	 *         车辆唯一标识 @return void 返回类型 @throws
-	 */
-	private void updateChargeConfig() {
-
-		long currentTime = System.currentTimeMillis();
-		if (currentTime - lastTimeCharge > 1000 * 60 * 60*12) {
-			lastTimeCharge = currentTime;
-			String vehicleAlarm = Conf.VEHICLE_CONDITION_CHARGE + "config";
-
-			Map<String, String> map = setRedis();
-
-			if (map.size() > 0) {
-
-				util.del(vehicleAlarm);
-
-				util.hmset(vehicleAlarm, map);
-			}
-
-		}
-
-	}
-
-	/**
-	 * @return
-	 * @Title: setRedis
-	 * @Description: TODO(这里用一句话描述这个方法的作用)
-	 * @param 设定文件
-	 * @return void 返回类型 @throws
-	 */
-	private Map<String, String> setRedis() {
-
-		String sql = "SELECT code,option,value,VALUE_LAST ,status,FIBER_UNID  FROM cube.PDA_VEHICLE_DETAIL where type=1 and status=3 and flag_del=0 order by INX desc";
-
-		List<Object> params = new ArrayList<Object>();
-
+	// /**
+	// *
+	// * 加载数据库中数据，安装数据字典存储
+	// */
+	private void loadData() {
+		String sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS,ALARM_LEVEL,ALARM_NAME,fiber_unid  FROM  cube.PDA_CUSTOM_SETUP where type=1 and flag_del=0 and status=3 order by INX desc";
+		List<Object> params = new CopyOnWriteArrayList<Object>();
 		List<VehicleStatusBean> list = null;
 		try {
-
+			JdbcUtils jdbcUtils = SingletonJDBC.getJDBC();
 			list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		Map<String, String> map = new HashMap<String, String>();
-		for (VehicleStatusBean vsbean : list) {
-			map.put(vsbean.getFIBER_UNID() + vsbean.getStatus().toString(), JsonUtils.serialize(vsbean));
+		// Map<String, List<VehicleStatusBean>> map = new ConcurrentHashMap<>();
+		this.statusData.clear();
+		if(list==null)
+		{
+			return ;
 		}
-		return map;
+		for (VehicleStatusBean vsbean : list) {
+			if (!this.statusData.containsKey(vsbean.getFIBER_UNID())) {
+				List<VehicleStatusBean> temp = new ArrayList<VehicleStatusBean>();
+				temp.add(vsbean);
+				this.statusData.put(vsbean.getFIBER_UNID(), temp);
+			} else {
+				List<VehicleStatusBean> temp = this.statusData.get(vsbean.getFIBER_UNID());
+				temp.add(vsbean);
+				this.statusData.replace(vsbean.getFIBER_UNID(), temp);
+			}
+		}
+		
+
 	}
 
 }

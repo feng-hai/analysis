@@ -54,7 +54,7 @@ public class LocationDB implements State {
 	}
 
 	public void setLocationsBulk(List<List<VehicleAlarmBean>> omokList) {
-		Collections.reverse(omokList);
+		//Collections.reverse(omokList);
 		for (List<VehicleAlarmBean> omok : omokList) {
 			try {
 				for (VehicleAlarmBean alarm : omok) {

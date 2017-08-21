@@ -344,7 +344,7 @@ public class LocationDB implements State {
 			e.printStackTrace();
 		}
 		// Map<String, List<VehicleStatusBean>> map = new ConcurrentHashMap<>();
-		this.statusData.clear();
+		//this.statusData.clear();
 		if(list==null)
 		{
 			return ;

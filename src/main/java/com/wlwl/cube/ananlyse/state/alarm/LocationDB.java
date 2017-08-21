@@ -95,7 +95,7 @@ public class LocationDB implements State {
 		StringBuilder update = new StringBuilder();
 		update.append("update sensor.ANA_VEHICLE_EVENT_" + alarm.getTableSuf() + " set FLAG_DID=1,DATIME_END=");
 		update.append("'").append(alarm.getDateTime()).append("'");
-		update.append(" where unid=").append("'").append(alarm.getUnid()).append("'");
+		update.append(" where unid=").append("'").append(alarm.getUnid()).append("' and datime_begin<str_to_date('").append(alarm.getDateTime()).append("','%Y-%m-%d %H:%i:%s')");
 		try {
 			jdbcUtils = SingletonJDBC.getJDBC();
 			jdbcUtils.updateByPreparedStatement(update.toString(), new ArrayList<Object>());

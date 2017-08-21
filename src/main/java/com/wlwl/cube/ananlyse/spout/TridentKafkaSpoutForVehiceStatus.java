@@ -93,6 +93,8 @@ public class TridentKafkaSpoutForVehiceStatus {
 		config.scheme = new SchemeAsMultiScheme(new StringScheme());
 		// Consume new data from the topic
 		config.ignoreZkOffsets = true;
+	
+		
 
 		config.startOffsetTime =kafka.api.OffsetRequest.LatestTime(); // -2
 																		// 从kafka头开始

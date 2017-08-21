@@ -90,8 +90,10 @@ public class LocationDB implements State {
 				updateVehicleSatusNew(omok);
 				// updateVehicleStatus(omok, omok.getVehicle_UNID().getValue());
 				// 定时更新在线状态
-				checkCharge(omok);
+				
 				updateNoOnline();
+				
+				//checkCharge(omok);
 				if (currentTime - lastTime > 1000 * 60 *5) {
 					this.lastTime = currentTime;
 					loadData();

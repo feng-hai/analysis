@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.storm.trident.state.State;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.wlwl.cube.analyse.bean.VehicleStatisticBean;
 import com.wlwl.cube.analyse.bean.VehicleStatusBean;
 import com.wlwl.cube.ananlyse.state.JsonUtils;
@@ -32,7 +35,9 @@ import com.wlwl.cube.mysql.SingletonJDBC;
 public class HBaseState implements State {
 	private static final String tableName = "DataAnalysis";
 	private static final String family = "count";
-
+    private static final Logger log=LoggerFactory.getLogger(HBaseState.class);
+    
+    private Long removeTime=System.currentTimeMillis();
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -54,26 +59,32 @@ public class HBaseState implements State {
 	}
 
 	public void setVehicleBulk(List<VehicleStatisticBean> vehicles) {
+		
+	
 
 		try {
+			
+			//log.info("开始更新");
 			if (!HBaseUtils.exists(tableName)) {
 				HBaseUtils.createTable(tableName, family);
 			}
+			//log.info("检查表解释");
 
 			for (VehicleStatisticBean vehicle : vehicles) {
 				//System.out.println(JsonUtils.serialize(vehicle));
+				//log.info("开始更新hbase");
 				if (vehicle != null) {
 					insertDataForMile(vehicle);
 					insertDataForEnergy(vehicle);
 					insertDataForFule(vehicle);
 					insertDataForWorkTime(vehicle);
-					updateVehicleHours(String .valueOf(vehicle.getWorkTimeDateTime_temp()),vehicle.getVehicle_unid());
+					//updateVehicleHours(String .valueOf(vehicle.getWorkTimeDateTime_temp()),vehicle.getVehicle_unid());
 				}
 			}
 			// HBaseUtils.close();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("错误：",e);
 		}
 	}
 
@@ -99,6 +110,8 @@ public class HBaseState implements State {
 			HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicle), family, "workEnd",
 					StateUntils.formate(vehicle.getWorkTimeDateTime_end()));
 		}
+		
+		//log.info("hbase插入成功01");
 
 	}
 
@@ -108,6 +121,7 @@ public class HBaseState implements State {
 
 			HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicle), family, "workTimeCount",
 					String.valueOf(vehicle.getWorkTimeCount()));
+			//log.info("hbase插入成功02");
 			
 		}
 	}
@@ -123,6 +137,7 @@ public class HBaseState implements State {
 		}
 		HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicle), family, "energyTatol",
 				vehicle.getWorkEnergy_end().toString());
+		//log.info("hbase插入成功03");
 
 	}
 
@@ -137,6 +152,7 @@ public class HBaseState implements State {
 		}
 		HBaseUtils.insert(tableName, TimeBaseRowStrategy.getRowKeyForHase(vehicle), family, "FuleTatol",
 				vehicle.getWorkFule_end().toString());
+		//log.info("hbase插入成功04");
 
 	}
 	

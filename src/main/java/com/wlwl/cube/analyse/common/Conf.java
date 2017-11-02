@@ -101,7 +101,7 @@ public class Conf {
 	/**
 	* @Fields BROKERURL : storm节点地址BrokerUrl
 	*/ 
-	public static final String BROKERURL="maria.cube:9092,namenode.cube:9092,datanode1.cube:9092,hyperrouter1.cube:9092,hyperrouter2.cube:9092";
+	public static final String BROKERURL="hyperrouter4.cube:9092,datanode1.cube:9092,hyperrouter1.cube:9092,hyperrouter2.cube:9092";
 	
 	
 	/**

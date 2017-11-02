@@ -154,19 +154,19 @@ public class TridentKafkaWordCount {
      *
      * @return the storm topology
      */
-    public StormTopology buildProducerTopology(Properties prop) {
-        TopologyBuilder builder = new TopologyBuilder();
-        builder.setSpout("spout", new RandomSentenceSpout(), 2);
-        /**
-         * The output field of the RandomSentenceSpout ("word") is provided as the boltMessageField
-         * so that this gets written out as the message in the kafka topic.
-         */
-        KafkaBolt bolt = new KafkaBolt().withProducerProperties(prop)
-                .withTopicSelector(new DefaultTopicSelector("test"))
-                .withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper("key", "word"));
-        builder.setBolt("forwardToKafka", bolt, 1).shuffleGrouping("spout");
-        return builder.createTopology();
-    }
+   // public StormTopology buildProducerTopology(Properties prop) {
+//        TopologyBuilder builder = new TopologyBuilder();
+//        builder.setSpout("spout", new RandomSentenceSpout(), 2);
+//        /**
+//         * The output field of the RandomSentenceSpout ("word") is provided as the boltMessageField
+//         * so that this gets written out as the message in the kafka topic.
+//         */
+//        KafkaBolt bolt = new KafkaBolt().withProducerProperties(prop)
+//                .withTopicSelector(new DefaultTopicSelector("test"))
+//                .withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper("key", "word"));
+//        builder.setBolt("forwardToKafka", bolt, 1).shuffleGrouping("spout");
+//        return builder.createTopology();
+  //  }
 
     /**
      * Returns the storm config for the topology that publishes sentences to kafka "test" topic using a kafka bolt.
@@ -233,7 +233,7 @@ public class TridentKafkaWordCount {
             // submit the consumer topology.
             StormSubmitter.submitTopology(args[0] + "-consumer", conf, wordCount.buildConsumerTopology(null));
             // submit the producer topology.
-            StormSubmitter.submitTopology(args[0] + "-producer", conf, wordCount.buildProducerTopology(wordCount.getProducerConfig()));
+          //  StormSubmitter.submitTopology(args[0] + "-producer", conf, wordCount.buildProducerTopology(wordCount.getProducerConfig()));
         } else {
             LocalDRPC drpc = new LocalDRPC();
             LocalCluster cluster = new LocalCluster();
@@ -244,7 +244,7 @@ public class TridentKafkaWordCount {
             Config conf = new Config();
             conf.setMaxSpoutPending(20);
             // submit the producer topology.
-            cluster.submitTopology("kafkaBolt", conf, wordCount.buildProducerTopology(wordCount.getProducerConfig()));
+           // cluster.submitTopology("kafkaBolt", conf, wordCount.buildProducerTopology(wordCount.getProducerConfig()));
 
             // keep querying the word counts for a minute.
             for (int i = 0; i < 60; i++) {

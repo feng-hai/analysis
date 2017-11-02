@@ -15,6 +15,7 @@ import org.apache.storm.trident.state.State;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.esotericsoftware.minlog.Log;
 import com.wlwl.cube.analyse.bean.ObjectModelOfKafka;
 import com.wlwl.cube.analyse.bean.Pair;
 import com.wlwl.cube.analyse.bean.VehicleAlarmBean;
@@ -33,7 +34,7 @@ public class LocationDB implements State {
 
 	private RedisUtils util = null;
 	private JdbcUtils jdbcUtils = null;
-	private static final Logger LOG = LoggerFactory.getLogger(VehicleStatusFunction.class);
+	private static final Logger log = LoggerFactory.getLogger(VehicleStatusFunction.class);
 	SimpleDateFormat DEFAULT_DATE_SIMPLEDATEFORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private Map<String, List<VehicleStatusBean>> statusData = null;
 	public LocationDB() {
@@ -48,11 +49,9 @@ public class LocationDB implements State {
 	public void beginCommit(Long txid) {
 
 	}
-
 	public void commit(Long txid) {
 
 	}
-
 	public void setLocationsBulk(List<List<VehicleAlarmBean>> omokList) {
 		//Collections.reverse(omokList);
 		for (List<VehicleAlarmBean> omok : omokList) {
@@ -65,13 +64,14 @@ public class LocationDB implements State {
 							alertEnd(alarm);
 						}
 					} catch (Exception ex) {
-						System.out.println(ex.getMessage());
+						log.error("错误",ex);
 					}
 				}
 			} catch (Exception ex) {
-				System.out.println(ex.getMessage());
+				log.error("错误",ex);
 			}
 		}
+		omokList=null;
 
 	}
 
@@ -83,7 +83,7 @@ public class LocationDB implements State {
 				List<VehicleAlarmBean> alarm = vehicleAlarm.getAlarmBean();
 				alarmList.add(alarm);
 			} catch (Exception ex) {
-				System.out.println(ex.getMessage());
+				log.error("错误",ex);
 			}
 		}
 		return alarmList;
@@ -100,8 +100,7 @@ public class LocationDB implements State {
 			jdbcUtils = SingletonJDBC.getJDBC();
 			jdbcUtils.updateByPreparedStatement(update.toString(), new ArrayList<Object>());
 		} catch (SQLException e) {
-			 System.out.println("alarm end error");
-			 e.printStackTrace();
+			 log.error("错误",e);
 		}
 
 	}
@@ -128,8 +127,8 @@ public class LocationDB implements State {
 			jdbcUtils.insertByPreparedStatement(sql, params);
 
 		} catch (SQLException e) {
-			 System.out.println("alarm start error");
-			 e.printStackTrace();
+			
+			 log.error("错误",e);
 		} finally {
 		}
 //		StringBuilder update = new StringBuilder();

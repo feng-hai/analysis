@@ -31,7 +31,10 @@ import org.apache.storm.spout.SchemeAsMultiScheme;
 import org.apache.storm.topology.TopologyBuilder;
 
 import org.apache.storm.tuple.Fields;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.esotericsoftware.minlog.Log;
 import com.wlwl.cube.analyse.bean.VehicleStatusBean;
 import com.wlwl.cube.ananlyse.functions.CreateVehicleModelFunction;
 import com.wlwl.cube.ananlyse.functions.DeviceIDFunction;
@@ -75,6 +78,8 @@ public class TridentKafkaSpoutForCharge {
 	private String zkUrl;
 	private String brokerUrl;
 	private String topicId;
+	
+	private static final Logger log=LoggerFactory.getLogger(TridentKafkaSpoutForCharge.class);
 
 	public TridentKafkaSpoutForCharge(String zkUrl, String brokerUrl, String topicId) {
 		this.zkUrl = zkUrl;
@@ -84,11 +89,12 @@ public class TridentKafkaSpoutForCharge {
 
 	public TransactionalTridentKafkaSpout createKafkaSpout() {
 		ZkHosts hosts = new ZkHosts(zkUrl);
+		hosts.refreshFreqSecs=120;
 		TridentKafkaConfig config = new TridentKafkaConfig(hosts, topicId, "vehicleCharge");
 		config.scheme = new SchemeAsMultiScheme(new StringScheme());
 		// Consume new data from the topic
 		config.ignoreZkOffsets = true;
-
+		
 		config.startOffsetTime = kafka.api.OffsetRequest.LatestTime(); // -2
 																		// 从kafka头开始
 																		// -1
@@ -96,7 +102,6 @@ public class TridentKafkaSpoutForCharge {
 																		// 0 =无
 																		// 从ZK开始
 																		// kafka.api.OffsetRequest.LatestTime();
-
 		return new TransactionalTridentKafkaSpout(config);
 	}
 
@@ -114,29 +119,39 @@ public class TridentKafkaSpoutForCharge {
 		// addDRPCStream(tridentTopology, addTridentState(tridentTopology),
 		// drpc);
 		Map<String, List<VehicleStatusBean>> statusMapCharge = loadData("1", "3");
-		Map<String, List<VehicleStatusBean>> statusMapstatus = loadData("1", "");
-		Map<String, List<VehicleStatusBean>> statusMapAlarm = loadData("2", "");
+//		Map<String, List<VehicleStatusBean>> statusMapstatus = loadData("1", "");
+//		Map<String, List<VehicleStatusBean>> statusMapAlarm = loadData("2", "");
 		Stream stream = tridentTopology.newStream("spoutCharge", createKafkaSpout()).parallelismHint(15)
 				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(2)
-				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId")).parallelismHint(2)
-				.partitionBy(new Fields("deviceId")).parallelismHint(2);
-		//充电
-		stream.partitionPersist(new LocationDBFactory(statusMapCharge), new Fields("vehicle"), new LocationUpdater())
-				.parallelismHint(25);
-		//状态
-		stream.partitionPersist(new com.wlwl.cube.ananlyse.state.query.LocationDBFactory(statusMapstatus),
-				new Fields("vehicle"), new com.wlwl.cube.ananlyse.state.query.LocationUpdater()).parallelismHint(10);
-		//报警
-		stream.each(new Fields("vehicle"), new VehicleAlarmFetchFunction(statusMapAlarm), new Fields("vehicleInfo"))
-				.parallelismHint(6).partitionPersist(new com.wlwl.cube.ananlyse.state.alarm.LocationDBFactory(),
-						new Fields("vehicleInfo"), new com.wlwl.cube.ananlyse.state.alarm.LocationUpdater())
-				.parallelismHint(10);
-		//分析
-		stream.each(new Fields("deviceId", "vehicle"), new SaveValueToRedisFunction(), new Fields("vehicleInfo"))
-		.parallelismHint(10)
-		//.each(new Fields("countInfo"), new SaveValueToHBaseFunction(), new Fields("vehicleInfo"))
-		.partitionPersist(new HBaseQueryVehicleFactory(), new Fields("vehicleInfo"), new HBaseVehicleUpdate()).parallelismHint(16);
+				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId")).parallelismHint(2);
 
+
+//		// 状态
+//		stream.partitionBy(new Fields("deviceId")).parallelismHint(2)
+//				.partitionPersist(new com.wlwl.cube.ananlyse.state.query.LocationDBFactory(statusMapstatus),
+//						new Fields("vehicle"), new com.wlwl.cube.ananlyse.state.query.LocationUpdater())
+//				.parallelismHint(10);
+//		// 报警
+//		stream.partitionBy(new Fields("deviceId")).parallelismHint(2)
+//				.each(new Fields("vehicle"), new VehicleAlarmFetchFunction(statusMapAlarm), new Fields("vehicleInfo"))
+//				.parallelismHint(6).partitionBy(new Fields("deviceId"))
+//				.parallelismHint(2).partitionPersist(new com.wlwl.cube.ananlyse.state.alarm.LocationDBFactory(),
+//						new Fields("vehicleInfo"), new com.wlwl.cube.ananlyse.state.alarm.LocationUpdater())
+//				.parallelismHint(10);
+//		
+//		// 充电
+		stream.partitionBy(new Fields("deviceId")).parallelismHint(2)
+				.partitionPersist(new LocationDBFactory(statusMapCharge), new Fields("vehicle"), new LocationUpdater())
+				.parallelismHint(25);
+////		// 分析
+		stream.partitionBy(new Fields("deviceId")).parallelismHint(2)
+				.each(new Fields("deviceId", "vehicle"), new SaveValueToRedisFunction(), new Fields("vehicleInfo"))
+				.parallelismHint(10)
+				// .each(new Fields("countInfo"), new
+				// SaveValueToHBaseFunction(), new Fields("vehicleInfo"))
+				.partitionPersist(new HBaseQueryVehicleFactory(), new Fields("vehicleInfo"), new HBaseVehicleUpdate())
+				.parallelismHint(16);
+       
 		return tridentTopology.build();
 	}
 
@@ -149,23 +164,23 @@ public class TridentKafkaSpoutForCharge {
 	private Map<String, List<VehicleStatusBean>> loadData(String type, String status) {
 		String sql = "";
 		if (status.equals("3"))
-			sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS,ALARM_LEVEL,ALARM_NAME,fiber_unid  FROM  cube.PDA_CUSTOM_SETUP where type=1 and flag_del=0 and status=3 order by INX desc";
+			sql = "SELECT CODE,OPTION,VALUE,VALUE_LAST ,STATUS,REMARKS,ALARM_LEVEL,ALARM_NAME,FIBER_UNID  FROM  cube.PDA_CUSTOM_SETUP where type=1 and flag_del=0 and status=3 order by INX desc";
 		else {
-			sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS,ALARM_LEVEL,ALARM_NAME,fiber_unid  FROM  cube.PDA_CUSTOM_SETUP where type="
+			sql = "SELECT CODE,OPTION,VALUE,VALUE_LAST ,STATUS,REMARKS,ALARM_LEVEL,ALARM_NAME,FIBER_UNID  FROM  cube.PDA_CUSTOM_SETUP where type="
 					+ type + " and flag_del=0  order by INX desc";
 		}
 		List<Object> params = new CopyOnWriteArrayList<Object>();
 		List<VehicleStatusBean> list = null;
 		JdbcUtils jdbcUtils = SingletonJDBC.getJDBC();
 		try {
-
 			list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("",e);
 		} finally {
 			jdbcUtils.releaseConn();
 		}
+		log.info("数据加载条数："+list.size());
 		Map<String, List<VehicleStatusBean>> map = new ConcurrentHashMap<>();
 		for (VehicleStatusBean vsbean : list) {
 			if (!map.containsKey(vsbean.getFIBER_UNID())) {
@@ -178,6 +193,9 @@ public class TridentKafkaSpoutForCharge {
 				map.replace(vsbean.getFIBER_UNID(), temp);
 			}
 		}
+		
+		log.info("数据加载条数："+map.size());
+		
 		return map;
 
 	}
@@ -201,22 +219,23 @@ public class TridentKafkaSpoutForCharge {
 	 *
 	 * @return the storm topology
 	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public StormTopology buildProducerTopology(Properties prop) {
-		TopologyBuilder builder = new TopologyBuilder();
-		builder.setSpout("spout", new RandomSentenceSpout(), 2);
-		/**
-		 * The output field of the RandomSentenceSpout ("word") is provided as
-		 * the boltMessageField so that this gets written out as the message in
-		 * the kafka topic.
-		 */
-
-		KafkaBolt bolt = new KafkaBolt().withProducerProperties(prop)
-				.withTopicSelector(new DefaultTopicSelector("test"))
-				.withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper("key", "word"));
-		builder.setBolt("forwardToKafka", bolt, 1).shuffleGrouping("spout");
-		return builder.createTopology();
-	}
+	// @SuppressWarnings({ "rawtypes", "unchecked" })
+	// public StormTopology buildProducerTopology(Properties prop) {
+	// TopologyBuilder builder = new TopologyBuilder();
+	// builder.setSpout("spout", new RandomSentenceSpout(), 2);
+	// /**
+	// * The output field of the RandomSentenceSpout ("word") is provided as
+	// * the boltMessageField so that this gets written out as the message in
+	// * the kafka topic.
+	// */
+	//
+	// KafkaBolt bolt = new KafkaBolt().withProducerProperties(prop)
+	// .withTopicSelector(new DefaultTopicSelector("test"))
+	// .withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper("key",
+	// "word"));
+	// builder.setBolt("forwardToKafka", bolt, 1).shuffleGrouping("spout");
+	// return builder.createTopology();
+	// }
 
 	/**
 	 * Returns the storm config for the topology that publishes sentences to

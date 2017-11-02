@@ -1,43 +1,45 @@
 package com.wlwl.cube.analyse.bean;
 
-import java.text.ParseException;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.apache.htrace.fasterxml.jackson.core.type.TypeReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.wlwl.cube.analyse.common.Conf;
-import com.wlwl.cube.ananlyse.state.JsonUtils;
-import com.wlwl.cube.ananlyse.state.StateUntils;
-import com.wlwl.cube.mysql.JdbcUtils;
-import com.wlwl.cube.mysql.SingletonJDBC;
+import com.wlwl.cube.ananlyse.functions.VehicleAlarmFetchFunction;
 import com.wlwl.cube.redis.RedisSingleton;
 import com.wlwl.cube.redis.RedisUtils;
 
 public class VehicleAlarmStatus {
 	private ObjectModelOfKafka omokObject = null;
 	private RedisUtils util = null;
-
 	private static Map<String, String> alarmKeys = new ConcurrentHashMap<>();
-
+	private static Map<String, VehicleInfo> vehicleInfo = new ConcurrentHashMap<>();
 	private static final String aiid_key = "ALARM_AIID:";
+	private static Long lastTime=System.currentTimeMillis();
 	Map<String, List<VehicleStatusBean>> statusMap = null;
+	
+	private static final Logger log = LoggerFactory.getLogger(VehicleAlarmStatus.class);
 
+	
 	public VehicleAlarmStatus(ObjectModelOfKafka omok, Map<String, List<VehicleStatusBean>> status) {
 		this.omokObject = omok;
 		util = RedisSingleton.instance();
 		this.statusMap = status;
 	}
-
 	public List<VehicleAlarmBean> getAlarmBean() {
-
+		if(System.currentTimeMillis()-lastTime>1000*60*30)//半小时清一下缓存
+		{
+			lastTime=System.currentTimeMillis();
+			vehicleInfo.clear();
+		}
 		List<VehicleAlarmBean> alarmList = new ArrayList<VehicleAlarmBean>();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		try {
 			Pair vehiclePair = this.omokObject.getVehicle_UNID();
 			if (vehiclePair == null) {
@@ -48,16 +50,35 @@ public class VehicleAlarmStatus {
 				return alarmList;
 			}
 			String VehilceKey = "BIG_VEHICLE:" + unid;
-			List<String> lastValue = util.hmget(VehilceKey, "LAT_D", "LON_D", "domain_unid", "fiber_unid");
-			if (lastValue != null && lastValue.size() == 4) {
-				String lat = lastValue.get(0);
-				String lng = lastValue.get(1);
-				String domainId = lastValue.get(2);
-				String fiber_unid = lastValue.get(3);
-				if (lat != null && lng != null && domainId != null && fiber_unid != null) {
+			VehicleInfo vi = new VehicleInfo();
+			if (!vehicleInfo.containsKey(unid)) {
+				List<String> lastValue = util.hmget(VehilceKey, "LAT_D", "LON_D", "domain_unid", "fiber_unid");
+				if (lastValue != null && lastValue.size() == 4) {
+					String lat = lastValue.get(0);
+					String lng = lastValue.get(1);
+					String domainId = lastValue.get(2);
+					String fiber_unid = lastValue.get(3);
+					if (lat != null && lng != null && domainId != null && fiber_unid != null) {
+                           vi.setDomain(domainId);
+                           vi.setFiberid(fiber_unid);
+                           vi.setLat(Double.parseDouble(lat));
+                           vi.setLng(Double.parseDouble(lng));
+					}
+				}
+
+			}else{
+				vi =vehicleInfo.get(unid);
+			}
+
+			// if (lastValue != null && lastValue.size() == 4) {
+			// String lat = lastValue.get(0);
+			// String lng = lastValue.get(1);
+			// String domainId = lastValue.get(2);
+			// String fiber_unid = lastValue.get(3);
+				if ( vi.getFiberid()!= null) {
 					// util.hget(VehilceKey, "fiber_unid");
-					if (this.statusMap.containsKey(fiber_unid)) {
-						List<VehicleStatusBean> statusList = this.statusMap.get(fiber_unid);
+					if (this.statusMap.containsKey(vi.getFiberid())) {
+						List<VehicleStatusBean> statusList = this.statusMap.get(vi.getFiberid());
 						String date = this.omokObject.getDATIME_RX();
 						if (date == null) {
 							return alarmList;
@@ -73,38 +94,36 @@ public class VehicleAlarmStatus {
 									continue;
 								}
 								Boolean isTrue = statusBean.checkStatus(value);
+
 								String code = statusBean.getCODE();
-								if(code==null)
-								{
+								if (code == null) {
 									continue;
 								}
 								String errorName = statusBean.getALARM_NAME();
-								if(errorName==null)
-								{
+								if (errorName == null) {
 									continue;
 								}
 								Integer level = statusBean.getALARM_LEVEL();
-								if(level==null)
-								{
+								if (level == null) {
 									continue;
 								}
-								VehicleAlarmBean alarm = new VehicleAlarmBean();
-								alarm.setVehicleUnid(unid);
-								alarm.setDomainId(domainId);
-								alarm.setDateTime(date);
-								alarm.setErrorName(errorName);
-								alarm.setLat(lat);
-								alarm.setLng(lng);
-								alarm.setLevel(level);
-								alarm.setCode(code);
-								// 设置表后缀如：201702
-								String[] dataArray = date.split("-");
-								if (dataArray.length <2) {
-									continue;
-								}
-								alarm.setTableSuf(dataArray[0] + dataArray[1]);
+
 								if (isTrue && statusBean.getStatus() == 1) {
-									
+									VehicleAlarmBean alarm = new VehicleAlarmBean();
+									alarm.setVehicleUnid(unid);
+									alarm.setDomainId(vi.getDomain());
+									alarm.setDateTime(date);
+									alarm.setErrorName(errorName);
+									alarm.setLat(String.valueOf(vi.getLat()));
+									alarm.setLng(String.valueOf(vi.getLng()));
+									alarm.setLevel(level);
+									alarm.setCode(code);
+									// 设置表后缀如：201702
+									String[] dataArray = date.split("-");
+									if (dataArray.length < 2) {
+										continue;
+									}
+									alarm.setTableSuf(dataArray[0] + dataArray[1]);
 									if (!alarmKeys.containsKey(aiid_key + unid + code + level)) {
 										alarm.setIsBegin(true);
 										alarm.setUnid(UNID.getUnid());
@@ -112,19 +131,31 @@ public class VehicleAlarmStatus {
 										alarmKeys.put(aiid_key + unid + code + level, alarm.getUnid());
 										alarmKeys.put(aiid_key + unid + code + level + "suf", alarm.getTableSuf());
 									}
-
+									alarmKeys.put(aiid_key + unid + code + level + "time",
+											String.valueOf(new Date().getTime()));
+									alarmKeys.put(aiid_key + unid + code + level + "timeStr", date);
 								} else {
 									if (alarmKeys.containsKey(aiid_key + unid + code + level)
 											&& alarmKeys.containsKey(aiid_key + unid + code + level + "suf")) {
-										String id = alarmKeys.get(aiid_key + unid + code + level);
-										String suf = alarmKeys.get(aiid_key + unid + code + level + "suf");
-										if (id != null && suf != null) {
-											alarm.setUnid(id);
-											alarm.setIsBegin(false);
-											alarm.setTableSuf(suf);
-											alarmList.add(alarm);
-											alarmKeys.remove(aiid_key + unid + code + level);
-											alarmKeys.remove(aiid_key + unid + code + level + "suf");
+										String times = alarmKeys.get(aiid_key + unid + code + level + "time");
+
+										long tempTime = new Date().getTime() - Long.parseLong(times);
+										if (tempTime > 1000 * 60 * 5) {
+											String timseStr = alarmKeys.get(aiid_key + unid + code + level + "timeStr");
+											String id = alarmKeys.get(aiid_key + unid + code + level);
+											String suf = alarmKeys.get(aiid_key + unid + code + level + "suf");
+											if (id != null && suf != null) {
+												VehicleAlarmBean alarm = new VehicleAlarmBean();
+												alarm.setUnid(id);
+												alarm.setIsBegin(false);
+												alarm.setTableSuf(suf);
+												alarm.setDateTime(timseStr);
+												alarmList.add(alarm);
+												alarmKeys.remove(aiid_key + unid + code + level);
+												alarmKeys.remove(aiid_key + unid + code + level + "suf");
+												alarmKeys.remove(aiid_key + unid + code + level + "time");
+												alarmKeys.remove(aiid_key + unid + code + level + "timeStr");
+											}
 										}
 									}
 								}
@@ -132,9 +163,9 @@ public class VehicleAlarmStatus {
 						}
 					}
 				}
-			}
+//			}
 		} catch (Exception ex) {
-			System.out.println("錯誤" + ex.getMessage());
+			log.error("分析错误",ex);
 		}
 
 		return alarmList;

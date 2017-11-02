@@ -112,6 +112,7 @@ public class TridentKafkaTopologyForCharge {
 			Config conf = new Config();
 			conf.setMaxSpoutPending(20);
 			conf.setMessageTimeoutSecs(260);
+			
 			conf.setNumWorkers(1);
 			// submit the consumer topology.
 			StormSubmitter.submitTopology(args[0] + "-consumer", conf, kafkaInstance.buildConsumerTopology(null));

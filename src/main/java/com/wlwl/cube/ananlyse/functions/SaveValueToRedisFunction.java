@@ -10,12 +10,18 @@ package com.wlwl.cube.ananlyse.functions;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.swing.text.html.parser.Entity;
 
 import org.apache.storm.trident.operation.BaseFunction;
 import org.apache.storm.trident.operation.TridentCollector;
 import org.apache.storm.trident.operation.TridentOperationContext;
 import org.apache.storm.trident.tuple.TridentTuple;
 import org.apache.storm.tuple.Values;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.wlwl.cube.analyse.bean.ObjectModelOfKafka;
 import com.wlwl.cube.analyse.bean.Pair;
@@ -28,6 +34,8 @@ import com.wlwl.cuble.analyse.storager.IStorager;
 import com.wlwl.cuble.analyse.storager.RedisInstance;
 import com.wlwl.cuble.analyse.storager.StoragerSingleton;
 
+import scala.collection.immutable.HashMap;
+
 /**
  * @ClassName: SaveValueToRedisFunction
  * @Description: TODO统计里程数据
@@ -39,15 +47,30 @@ public class SaveValueToRedisFunction extends BaseFunction {
 
 	private static final long serialVersionUID = 4608482736186526306L;
 	private static final String preKey = "BIG_ANALYSIS:";
+	
+	private static final Logger log=LoggerFactory.getLogger(SaveValueToRedisFunction.class);
+	private Long removeTime;
 
 	// private RedisUtils util = null;
 	private IStorager<VehicleStatisticBean> redis = null;
+	
+	private static Map<String,VehicleStatisticBean> copeRedis=new ConcurrentHashMap<>();
 
 	@Override
 	public void prepare(Map conf, TridentOperationContext context) {
 		// util = new RedisUtils();
 		redis = StoragerSingleton.getInstance();
+		this.removeTime=System.currentTimeMillis();
 	}
+	/**
+     * No-op implemnation.
+     */
+    @Override
+    public void cleanup() {
+    	for (String key : copeRedis.keySet()) {
+    		  redis.setStorager(key, copeRedis.get(key));
+        }
+    }
 
 	/*
 	 * (non-Javadoc)
@@ -58,6 +81,14 @@ public class SaveValueToRedisFunction extends BaseFunction {
 	 * org.apache.storm.trident.operation.TridentCollector)
 	 */
 	public void execute(TridentTuple tuple, TridentCollector collector) {
+		
+		Long currentTime=System.currentTimeMillis();
+
+		if(currentTime-removeTime>1000*60*60*24)
+		{
+			this.removeTime=currentTime;
+			copeRedis.clear();
+		}
 
 		try {
 
@@ -70,11 +101,20 @@ public class SaveValueToRedisFunction extends BaseFunction {
 			String device = tuple.getStringByField("deviceId");
 
 			String id = preKey + TimeBaseRowStrategy.getRowKeyForRedis(time, device);
+			
+			if(!copeRedis.containsKey(id))
+			{
+				if(redis.keyExists(id))
+				{
+					copeRedis.put(id, redis.getStorager(id));
+				}
+				
+			}
 
 			// 判断key是否存在，如果不存在，创建，如果存在累计
-			if (redis.keyExists(id)) {
+			if (copeRedis.containsKey(id)) {
 				// 获取Redis中上次存储的值
-				VehicleStatisticBean vehicle = redis.getStorager(id);
+				VehicleStatisticBean vehicle = copeRedis.get(id);
 				// 更新公共数据
 				setPublicValue(vehicle, omok, device);
 				
@@ -105,7 +145,7 @@ public class SaveValueToRedisFunction extends BaseFunction {
 					if (tempDate.getTime() - vehicle.getWorkTimeDateTime_end_t().getTime() >= 1000 * 60 * 5)// 判断是两次工作
 					{
 						vehicle.setWorkTimeDateTime_start_t(tempDate);
-						vehicle.setWorkTimeDateTime_min_t(tempDate);
+						//vehicle.setWorkTimeDateTime_min_t(tempDate);
 					}
 					vehicle.setWorkTimeDateTime_end_t(tempDate);
 					vehicle.setWorkTimeCount(vehicle.getWorkTimeCount() + vehicle.getWorkTimeDateTime_end_t().getTime()
@@ -122,13 +162,13 @@ public class SaveValueToRedisFunction extends BaseFunction {
 					}
 					//System.out.println(vehicle.getWorkTimeCount());
 
-				} else if (tempDate.getTime() < vehicle.getWorkTimeDateTime_min_t().getTime()) {
-					vehicle.setWorkTimeCount(vehicle.getWorkTimeCount() + vehicle.getWorkTimeDateTime_min_t().getTime()
+				} else if (tempDate.getTime() < vehicle.getWorkTimeDateTime_start_t().getTime()) {
+					vehicle.setWorkTimeCount(vehicle.getWorkTimeCount() + vehicle.getWorkTimeDateTime_start_t().getTime()
 							- tempDate.getTime());
 					//设置差值
-					vehicle.setWorkTimeDateTime_temp(vehicle.getWorkTimeDateTime_min_t().getTime()
+					vehicle.setWorkTimeDateTime_temp(vehicle.getWorkTimeDateTime_start_t().getTime()
 							- tempDate.getTime());
-					vehicle.setWorkTimeDateTime_min_t(tempDate);
+					//vehicle.setWorkTimeDateTime_min_t(tempDate);
 				}
 
 				//System.out.println(vehicle.getWorkTimeCount());
@@ -209,7 +249,7 @@ public class SaveValueToRedisFunction extends BaseFunction {
 						vehicle.setWorkFuleCount(vehicle.getWorkFule_end() - vehicle.getWorkFule_start());
 					}
 				}
-				redis.setStorager(id, vehicle);
+				copeRedis.put(id, vehicle);
 				collector.emit(new Values(vehicle));
 
 			} else {
@@ -254,10 +294,16 @@ public class SaveValueToRedisFunction extends BaseFunction {
 					// 获取最后一次工作时间
 					vehicle.setWorkTimeDateTime_end_t(StateUntils.strToDate(omok.getDATIME_RX()));
 					vehicle.setWorkTimeDateTime_start_t(StateUntils.strToDate(omok.getDATIME_RX()));
+					copeRedis.put(id, vehicle);
 					redis.setStorager(id, vehicle);
+					//log.info("提交");
 					collector.emit(new Values(vehicle));
 					// 删除昨天的缓存信息
 					String yestodayID = preKey + TimeBaseRowStrategy.getRowKeyForRedisBefore(time, device);
+					if(copeRedis.containsKey(yestodayID))
+					{
+						copeRedis.remove(yestodayID);
+					}
 					if (redis.keyExists(yestodayID)) {
 						redis.deleteByKey(yestodayID);
 					}
@@ -267,7 +313,7 @@ public class SaveValueToRedisFunction extends BaseFunction {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("错误",e);
 		}
 
 	}

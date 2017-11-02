@@ -25,6 +25,8 @@ import com.wlwl.cube.analyse.bean.VehicleStatusBean;
 import com.wlwl.cube.analyse.common.Conf;
 import com.wlwl.cube.redis.RedisUtils;
 
+
+
 import java.lang.reflect.Field;
 
 /**
@@ -349,7 +351,8 @@ public class JdbcUtils {
 				if (cols_value == null) {
 					cols_value = "";
 				}
-				Field field = cls.getDeclaredField(cols_name);
+				
+				Field field = cls.getDeclaredField(cols_name.toLowerCase());
 				field.setAccessible(true); // 打开javabean的访问权限
 				field.set(resultObject, cols_value);
 			}
@@ -382,13 +385,10 @@ public class JdbcUtils {
 	public void releaseConn() {
 		
 		try {
-			
-			
 			if(connection!=null&&!connection.isClosed())
 			{
 					connection.close();
-					connection=null;
-				
+					connection=null;	
 			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block

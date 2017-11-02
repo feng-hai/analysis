@@ -134,22 +134,22 @@ public class TridentKafkaSpout {
 	 *
 	 * @return the storm topology
 	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public StormTopology buildProducerTopology(Properties prop) {
-		TopologyBuilder builder = new TopologyBuilder();
-		builder.setSpout("spout", new RandomSentenceSpout(), 2);
-		/**
-		 * The output field of the RandomSentenceSpout ("word") is provided as
-		 * the boltMessageField so that this gets written out as the message in
-		 * the kafka topic.
-		 */
-
-		KafkaBolt bolt = new KafkaBolt().withProducerProperties(prop)
-				.withTopicSelector(new DefaultTopicSelector("test"))
-				.withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper("key", "word"));
-		builder.setBolt("forwardToKafka", bolt, 1).shuffleGrouping("spout");
-		return builder.createTopology();
-	}
+//	@SuppressWarnings({ "rawtypes", "unchecked" })
+//	public StormTopology buildProducerTopology(Properties prop) {
+//		TopologyBuilder builder = new TopologyBuilder();
+//		builder.setSpout("spout", new RandomSentenceSpout(), 2);
+//		/**
+//		 * The output field of the RandomSentenceSpout ("word") is provided as
+//		 * the boltMessageField so that this gets written out as the message in
+//		 * the kafka topic.
+//		 */
+//
+//		KafkaBolt bolt = new KafkaBolt().withProducerProperties(prop)
+//				.withTopicSelector(new DefaultTopicSelector("test"))
+//				.withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper("key", "word"));
+//		builder.setBolt("forwardToKafka", bolt, 1).shuffleGrouping("spout");
+//		return builder.createTopology();
+//	}
 
 	/**
 	 * Returns the storm config for the topology that publishes sentences to

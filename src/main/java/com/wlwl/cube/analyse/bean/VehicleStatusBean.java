@@ -18,6 +18,7 @@ import java.io.Serializable;
 * @date 2016年10月13日 上午11:14:43
 *
 */
+
 public class VehicleStatusBean implements Serializable {
 	
 	public VehicleStatusBean() {  
@@ -27,29 +28,29 @@ public class VehicleStatusBean implements Serializable {
 	* @Fields serialVersionUID : TODO(用一句话描述这个变量表示什么)
 	*/ 
 	private static final long serialVersionUID = 944184066314613673L;
-	private String CODE="";
-	private String OPTION="=";
-	private Integer VALUE=0;
-	private Integer VALUE_LAST=0;
-	private Integer STATUS=0;
-	private String FIBER_UNID="";
-	private String REMARKS="";
-	private Integer ALARM_LEVEL=0;
-	private String ALARM_NAME="";
+	private String code="";
+	private String option="=";
+	private Integer value=0;
+	private Integer value_last=0;
+	private Integer status=0;
+	private String fiber_unid="";
+	private String remarks="";
+	private Integer alarm_level=0;
+	private String alarm_name="";
 	public Integer getALARM_LEVEL() {
-		return ALARM_LEVEL;
+		return alarm_level;
 	}
 
 	public void setALARM_LEVEL(Integer aLARM_LEVEL) {
-		ALARM_LEVEL = aLARM_LEVEL;
+		alarm_level = aLARM_LEVEL;
 	}
 
 	public String getALARM_NAME() {
-		return ALARM_NAME;
+		return alarm_name;
 	}
 
 	public void setALARM_NAME(String aLARM_NAME) {
-		ALARM_NAME = aLARM_NAME;
+		alarm_name = aLARM_NAME;
 	}
 
 	
@@ -57,33 +58,33 @@ public class VehicleStatusBean implements Serializable {
 	
 	
 	public String getREMARKS() {
-		return REMARKS;
+		return remarks;
 	}
 
 	public void setREMARKS(String rEMARKS) {
-		REMARKS = rEMARKS;
+		remarks = rEMARKS;
 	}
 
 	public String getFIBER_UNID() {
-		return FIBER_UNID;
+		return fiber_unid;
 	}
 
 	public void setFIBER_UNID(String fIBER_UNID) {
-		FIBER_UNID = fIBER_UNID;
+		fiber_unid = fIBER_UNID;
 	}
 
 	/**
 	* @return cODE
 	*/
 	public String getCODE() {
-		return CODE;
+		return code;
 	}
 
 	/**
 	* @param cODE 要设置的 cODE
 	*/
 	public void setCODE(String cODE) {
-		CODE = cODE;
+		code = cODE;
 	}
 
 
@@ -92,7 +93,7 @@ public class VehicleStatusBean implements Serializable {
 	* @return oPTION
 	*/
 	public String getOPTION() {
-		return OPTION;
+		return option;
 	}
 
 
@@ -101,7 +102,7 @@ public class VehicleStatusBean implements Serializable {
 	* @param oPTION 要设置的 oPTION
 	*/
 	public void setOPTION(String oPTION) {
-		OPTION = oPTION;
+		option = oPTION;
 	}
 
 
@@ -110,7 +111,7 @@ public class VehicleStatusBean implements Serializable {
 	* @return vALUE
 	*/
 	public Integer getVALUE() {
-		return VALUE;
+		return value;
 	}
 
 
@@ -119,7 +120,7 @@ public class VehicleStatusBean implements Serializable {
 	* @param vALUE 要设置的 vALUE
 	*/
 	public void setVALUE(Integer vALUE) {
-		VALUE = vALUE;
+		value = vALUE;
 	}
 
 
@@ -127,7 +128,7 @@ public class VehicleStatusBean implements Serializable {
 	* @return status
 	*/
 	public Integer getStatus() {
-		return STATUS;
+		return status;
 	}
 
 
@@ -135,14 +136,14 @@ public class VehicleStatusBean implements Serializable {
 	* @param status 要设置的 status
 	*/
 	public void setStatus(Integer status) {
-		this.STATUS = status;
+		this.status = status;
 	}
 
 	/**
 	* @return vALUE_LAST
 	*/
 	public Integer getVALUE_LAST() {
-		return VALUE_LAST;
+		return value_last;
 	}
 
 
@@ -150,7 +151,7 @@ public class VehicleStatusBean implements Serializable {
 	* @param vALUE_LAST 要设置的 vALUE_LAST
 	*/
 	public void setVALUE_LAST(Integer vALUE_LAST) {
-		VALUE_LAST = vALUE_LAST;
+		value_last = vALUE_LAST;
 	}
 
 	
@@ -158,59 +159,59 @@ public class VehicleStatusBean implements Serializable {
 	
 	public Boolean checkStatus(String value)
 	{
-		switch(OPTION)
+		switch(option)
 		{
 		case "=":
-			if(Double.parseDouble(value)==this.VALUE)
+			if(Double.parseDouble(value)==this.value)
 			{
 				return true;
 			}
 			break;
 		case ">":
-			if(Double.parseDouble(value)>this.VALUE)
+			if(Double.parseDouble(value)>this.value)
 			{
 				return true;
 			}
 			break;
 		case ">=":
-			if(Double.parseDouble(value)>=this.VALUE)
+			if(Double.parseDouble(value)>=this.value)
 			{
 				return true;
 			}
 			break;
 		case "<":
-			if(Double.parseDouble(value)<this.VALUE)
+			if(Double.parseDouble(value)<this.value)
 			{
 				return true;
 			}
 			break;
 		case "<=":
-			if(Double.parseDouble(value)<=this.VALUE)
+			if(Double.parseDouble(value)<=this.value)
 			{
 				return true;
 			}
 			break;
 		case "[between]":
-			if(Double.parseDouble(value)>=this.VALUE&&Double.parseDouble(value)<=this.VALUE_LAST)
+			if(Double.parseDouble(value)>=this.value&&Double.parseDouble(value)<=this.value_last)
 			{
 				return true;
 			}
 			break;
 		case "(between)":
-			if(this.VALUE<Double.parseDouble(value)&&this.VALUE_LAST>Double.parseDouble(value))
+			if(this.value<Double.parseDouble(value)&&this.value_last>Double.parseDouble(value))
 			{
 				return true;
 			}
 			break;
 		case "(between]":
 			
-			if(this.VALUE<Double.parseDouble(value)&&this.VALUE_LAST>=Double.parseDouble(value))
+			if(this.value<Double.parseDouble(value)&&this.value_last>=Double.parseDouble(value))
 			{
 				return true;
 			}
 			break;
 		case "[between)":
-			if(this.VALUE<=Integer.parseInt(value)&&this.VALUE_LAST>Integer.parseInt(value))
+			if(this.value<=Integer.parseInt(value)&&this.value_last>Integer.parseInt(value))
 			{
 				return true;
 			}

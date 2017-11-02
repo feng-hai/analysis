@@ -28,6 +28,7 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.esotericsoftware.minlog.Log;
 import com.wlwl.cube.analyse.bean.ObjectModelOfKafka;
 import com.wlwl.cube.analyse.bean.Pair;
 import com.wlwl.cube.analyse.bean.UNID;
@@ -57,9 +58,10 @@ import com.wlwl.cube.redis.RedisUtils;
 public class VehicleAlarmFetchFunction extends BaseFunction {
 
 	private static final long serialVersionUID = 8414621340097218898L;
-	private Map<String, List<VehicleStatusBean>> statusData;
+	private  Map<String, List<VehicleStatusBean>> statusData;
 
 	private long lastTime;
+	private static final Logger log = LoggerFactory.getLogger(VehicleAlarmFetchFunction.class);
 
 	@Override
 	public void prepare(Map conf, TridentOperationContext context) {
@@ -90,22 +92,25 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 		List<VehicleAlarmBean> alarmList = new ArrayList<VehicleAlarmBean>();
 		try {
 			ObjectModelOfKafka omok = (ObjectModelOfKafka) tuple.getValueByField("vehicle");
-			VehicleAlarmStatus vehicleAlarm = new VehicleAlarmStatus(omok, this.statusData);
-			alarmList = vehicleAlarm.getAlarmBean();
+			try {
+				VehicleAlarmStatus vehicleAlarm = new VehicleAlarmStatus(omok, this.statusData);
+				alarmList = vehicleAlarm.getAlarmBean();
+			} catch (Exception ex) {
+				log.error("数据转化错误", ex);
+			}
 			collector.emit(new Values(alarmList));
 		} catch (Exception e) {
-			 e.printStackTrace();
+			log.error("错误", e);
 		}
-
-		if (currentTime - lastTime > 1000 * 60 * 30) {
-			this.lastTime=currentTime;
-			//loadData();
+		if (currentTime - lastTime > 1000 * 60 * 60 * 12) {
+			this.lastTime = currentTime;
+			loadData();
 		}
 
 	}
 
 	private void loadData() {
-		String sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS,ALARM_LEVEL,ALARM_NAME,fiber_unid  FROM  cube.PDA_CUSTOM_SETUP where type=2 and flag_del=0 order by INX desc";
+		String sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS,ALARM_LEVEL,ALARM_NAME,fiber_unid  FROM  cube.PDA_CUSTOM_SETUP where type=2 and flag_del=0 and status=1 order by INX desc";
 		List<Object> params = new CopyOnWriteArrayList<Object>();
 		List<VehicleStatusBean> list = null;
 		try {
@@ -113,41 +118,21 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 			list = (List<VehicleStatusBean>) jdbcUtils.findMoreRefResult(sql, params, VehicleStatusBean.class);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Log.error("错误", e);
 		}
-		
-		this.statusData.clear();
+		Map<String, List<VehicleStatusBean>> beaMap = new ConcurrentHashMap<>();
 		for (VehicleStatusBean vsbean : list) {
-			if (!this.statusData.containsKey(vsbean.getFIBER_UNID())) {
+			if (!beaMap.containsKey(vsbean.getFIBER_UNID())) {
 				List<VehicleStatusBean> temp = new ArrayList<VehicleStatusBean>();
 				temp.add(vsbean);
-				this.statusData.put(vsbean.getFIBER_UNID(), temp);
+				beaMap.put(vsbean.getFIBER_UNID(), temp);
 			} else {
-				List<VehicleStatusBean> temp = this.statusData.get(vsbean.getFIBER_UNID());
+				List<VehicleStatusBean> temp = beaMap.get(vsbean.getFIBER_UNID());
 				temp.add(vsbean);
-				this.statusData.replace(vsbean.getFIBER_UNID(), temp);
+				beaMap.replace(vsbean.getFIBER_UNID(), temp);
 			}
 		}
-	//	Map<String, List<VehicleStatusBean>> map = new ConcurrentHashMap<>();
-//		for (VehicleStatusBean vsbean : list) {
-//			if (!map.containsKey(vsbean.getFIBER_UNID())) {
-//				List<VehicleStatusBean> temp = new ArrayList<VehicleStatusBean>();
-//				temp.add(vsbean);
-//				map.put(vsbean.getFIBER_UNID(), temp);
-//			} else {
-//				List<VehicleStatusBean> temp = map.get(vsbean.getFIBER_UNID());
-//				temp.add(vsbean);
-//				map.replace(vsbean.getFIBER_UNID(), temp);
-//			}
-//		}
-//		for (String key : map.keySet()) {
-//			//System.out.println("key= " + key + " and value= " + map.get(key));
-//			if (this.statusData.containsKey(key)) {
-//				this.statusData.replace(key, map.get(key));
-//			} else {
-//				this.statusData.put(key, map.get(key));
-//			}
-//		}
+		this.statusData = beaMap;
 
 	}
 

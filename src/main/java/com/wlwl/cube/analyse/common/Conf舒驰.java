@@ -97,11 +97,11 @@ public class Conf舒驰 {
 	/**
 	* @Fields ZKURL : zookeeper 地址
 	*/ 
-	public static final String  ZKURL="192.168.1.11:2181,192.168.1.12:2181,192.168.1.13:2181,192.168.1.14:2181";
+	public static final String  ZKURL="nn00-dev.ytsc.com:2181,dn00-dev.ytsc.com:2181,dn01-dev.ytsc.com:2181,dn02-dev.ytsc.com:2181";
 	/**
 	* @Fields BROKERURL : storm节点地址BrokerUrl
 	*/ 
-	public static final String BROKERURL="192.168.1.11:9092,192.168.1.12:9092,192.168.1.13:9092,192.168.1.14:9092";
+	public static final String BROKERURL="nn00-dev.ytsc.com:9092,dn00-dev.ytsc.com:9092,dn01-dev.ytsc.com:9092,dn02-dev.ytsc.com:9092";
 	
 	
 	/**

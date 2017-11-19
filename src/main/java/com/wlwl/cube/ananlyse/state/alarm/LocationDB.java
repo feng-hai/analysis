@@ -34,7 +34,7 @@ public class LocationDB implements State {
 
 	private RedisUtils util = null;
 	private JdbcUtils jdbcUtils = null;
-	private static final Logger log = LoggerFactory.getLogger(VehicleStatusFunction.class);
+	private static final Logger log = LoggerFactory.getLogger(LocationDB.class);
 	SimpleDateFormat DEFAULT_DATE_SIMPLEDATEFORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private Map<String, List<VehicleStatusBean>> statusData = null;
 	public LocationDB() {
@@ -92,15 +92,30 @@ public class LocationDB implements State {
 	
 	private void alertEnd(VehicleAlarmBean alarm) {
 
+//		StringBuilder update = new StringBuilder();
+//		update.append("update sensor.ANA_VEHICLE_EVENT_" + alarm.getTableSuf() + " set FLAG_DID=1,DATIME_END=");
+//		update.append("'").append(alarm.getDateTime()).append("'");
+//		update.append(" where unid=").append("'").append(alarm.getUnid()).append("' and datime_begin<str_to_date('").append(alarm.getDateTime()).append("','%Y-%m-%d %H:%i:%s')");
+//		try {
+//			jdbcUtils = SingletonJDBC.getJDBC();
+//			jdbcUtils.updateByPreparedStatement(update.toString(), new ArrayList<Object>());
+//		} catch (SQLException e) {
+//			 log.error("错误",e);
+//		}
+		
 		StringBuilder update = new StringBuilder();
-		update.append("update sensor.ANA_VEHICLE_EVENT_" + alarm.getTableSuf() + " set FLAG_DID=1,DATIME_END=");
-		update.append("'").append(alarm.getDateTime()).append("'");
-		update.append(" where unid=").append("'").append(alarm.getUnid()).append("' and datime_begin<str_to_date('").append(alarm.getDateTime()).append("','%Y-%m-%d %H:%i:%s')");
+		update.append("CALL `sensor`.`offAlarmting`('");
+		update.append(alarm.getUnid());
+		update.append("', '");
+		update.append(alarm.getDateTime());
+		update.append("', '");
+		update.append(alarm.getTableSuf());
+		update.append("')");
 		try {
-			jdbcUtils = SingletonJDBC.getJDBC();
 			jdbcUtils.updateByPreparedStatement(update.toString(), new ArrayList<Object>());
 		} catch (SQLException e) {
-			 log.error("错误",e);
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
 	}
@@ -109,25 +124,37 @@ public class LocationDB implements State {
 
 		try {
 			// connection = jdbc.getConnection();
-			String sql = "insert into sensor.ANA_VEHICLE_EVENT_" + alarm.getTableSuf()
-					+ "(UNID,ENTITY_UNID,DOMAIN_UNID,SUMMARY,EVENT_TYPE,LAT_D,LON_D,CONTEXT,LEVEL,ERROR_CODE,DATIME_BEGIN) values(?,?,?,?,?,?,?,?,?,?,?)";
+			//String sql = "insert into sensor.ANA_VEHICLE_EVENT_" + alarm.getTableSuf()
+				//	+ "(UNID,ENTITY_UNID,DOMAIN_UNID,SUMMARY,EVENT_TYPE,LAT_D,LON_D,CONTEXT,LEVEL,ERROR_CODE,DATIME_BEGIN) values(?,?,?,?,?,?,?,?,?,?,?)";
+			
+			String sql = "CALL `sensor`.`insertAlarmEvent`(?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?,?)";
+
 			List<Object> params = new ArrayList<Object>();
 			params.add(alarm.getUnid());
 			params.add(alarm.getVehicleUnid());
 			params.add(alarm.getDomainId());
-			params.add(alarm.getErrorName());
-			params.add("");
-			params.add(alarm.getLat());
-			params.add(alarm.getLng());
-			params.add("");
-			params.add(alarm.getLevel());
-			params.add("");
 			params.add(alarm.getDateTime());
-			jdbcUtils = SingletonJDBC.getJDBC();
-			jdbcUtils.insertByPreparedStatement(sql, params);
-
-		} catch (SQLException e) {
+			params.add(Double.parseDouble(alarm.getLng()));
+			params.add(Double.parseDouble(alarm.getLat()));
+			params.add("");//故障代码
+			params.add("");//故障代码unid
+			params.add(alarm.getErrorName());
+			params.add("alert");
+			params.add("");//原始码流
+			params.add(alarm.getLevel());
+			params.add(alarm.getTableSuf());
+			params.add("0");
+			// System.out.println("CALL
+			// `sensor`.`insertAlarmEvent`("+alamUnid+", "+unid+", "+domainId+",
+			// "+event.getDatimeBegin()+",
+			// "+alert.getLongitude()+","+alert.getLatitude()+",
+			// "+event.getCode()+", "+errorCode.getUNID()+", "+errorCode != null
+			// ? errorCode.getNAME() : ""+", "+eventType+", "+event.getHex()+",
+			// "+errorCode.getLEVEL()+", "+tabeSuf+")");
 			
+			jdbcUtils = SingletonJDBC.getJDBC();
+			jdbcUtils.updateByPreparedStatement(sql, params);
+		} catch (SQLException e) {
 			 log.error("错误",e);
 		} finally {
 		}

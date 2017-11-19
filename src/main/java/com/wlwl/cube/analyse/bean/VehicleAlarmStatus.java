@@ -39,7 +39,7 @@ public class VehicleAlarmStatus {
 			vehicleInfo.clear();
 		}
 		List<VehicleAlarmBean> alarmList = new ArrayList<VehicleAlarmBean>();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		//SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		try {
 			Pair vehiclePair = this.omokObject.getVehicle_UNID();
 			if (vehiclePair == null) {
@@ -64,6 +64,7 @@ public class VehicleAlarmStatus {
                            vi.setLat(Double.parseDouble(lat));
                            vi.setLng(Double.parseDouble(lng));
 					}
+					vehicleInfo.put(unid, vi);
 				}
 
 			}else{

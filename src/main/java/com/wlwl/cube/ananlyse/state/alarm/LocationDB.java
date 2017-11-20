@@ -14,22 +14,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.storm.trident.state.State;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.esotericsoftware.minlog.Log;
 import com.wlwl.cube.analyse.bean.ObjectModelOfKafka;
-import com.wlwl.cube.analyse.bean.Pair;
 import com.wlwl.cube.analyse.bean.VehicleAlarmBean;
 import com.wlwl.cube.analyse.bean.VehicleAlarmStatus;
 import com.wlwl.cube.analyse.bean.VehicleStatusBean;
-import com.wlwl.cube.analyse.common.Conf;
-import com.wlwl.cube.ananlyse.functions.VehicleStatusFunction;
-import com.wlwl.cube.ananlyse.state.JsonUtils;
-import com.wlwl.cube.ananlyse.state.StateUntils;
 import com.wlwl.cube.mysql.JdbcUtils;
 import com.wlwl.cube.mysql.SingletonJDBC;
 import com.wlwl.cube.redis.RedisSingleton;
 import com.wlwl.cube.redis.RedisUtils;
-
 public class LocationDB implements State {
 
 	private RedisUtils util = null;
@@ -137,7 +129,7 @@ public class LocationDB implements State {
 			params.add(Double.parseDouble(alarm.getLng()));
 			params.add(Double.parseDouble(alarm.getLat()));
 			params.add("");//故障代码
-			params.add("");//故障代码unid
+			params.add("0");//故障代码unid
 			params.add(alarm.getErrorName());
 			params.add("alert");
 			params.add("");//原始码流

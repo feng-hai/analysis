@@ -2014,5 +2014,32 @@ public class RedisUtils {
 			jedis.close();
 		}
 	}
+	
+	/** 
+	* @Title: setKeys 
+	* @Description: 批量的更新实时数据
+	* @param @param data    设定文件 
+	* @return void    返回类型 
+	* @throws 
+	*/
+	public void setKeys(Map<String, Map<String,String>> data  ){
+		Jedis jedis = null;
+		//Map<String,Map<String,String>> result = new HashMap<String,Map<String,String>>();
+		try {
+			jedis = pool.getResource();
+			Pipeline p = jedis.pipelined();
+			for(String key : data.keySet()) {
+				p.hmset(key, data.get(key)); 
+			}
+			p.sync();
+			
+		} catch (Exception e) {
+			//jedis.close();
+			e.printStackTrace();
+		} finally {
+			returnResource(pool, jedis);
+		}
+	//	return result;
+	}
 
 }

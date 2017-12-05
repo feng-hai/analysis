@@ -34,6 +34,7 @@ import com.wlwl.cube.analyse.bean.Pair;
 import com.wlwl.cube.analyse.bean.UNID;
 import com.wlwl.cube.analyse.bean.VehicleAlarmBean;
 import com.wlwl.cube.analyse.bean.VehicleAlarmStatus;
+import com.wlwl.cube.analyse.bean.VehicleInfo;
 import com.wlwl.cube.analyse.bean.VehicleStatisticBean;
 import com.wlwl.cube.analyse.bean.VehicleStatusBean;
 
@@ -41,7 +42,6 @@ import com.wlwl.cube.analyse.common.Conf;
 import com.wlwl.cube.ananlyse.state.JsonUtils;
 import com.wlwl.cube.ananlyse.state.StateUntils;
 import com.wlwl.cube.ananlyse.state.TimeBaseRowStrategy;
-
 import com.wlwl.cube.hbase.HBaseUtils;
 import com.wlwl.cube.mysql.JdbcUtils;
 import com.wlwl.cube.mysql.SingletonJDBC;
@@ -59,6 +59,7 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 
 	private static final long serialVersionUID = 8414621340097218898L;
 	private  Map<String, List<VehicleStatusBean>> statusData;
+	private static Map<String, VehicleInfo> vehicleInfo = new ConcurrentHashMap<>();
 
 	private long lastTime;
 	private static final Logger log = LoggerFactory.getLogger(VehicleAlarmFetchFunction.class);
@@ -88,6 +89,12 @@ public class VehicleAlarmFetchFunction extends BaseFunction {
 	 * org.apache.storm.trident.operation.TridentCollector)
 	 */
 	public void execute(TridentTuple tuple, TridentCollector collector) {
+		
+		if(System.currentTimeMillis()-lastTime>1000*60*30)//半小时清一下缓存
+		{
+			lastTime=System.currentTimeMillis();
+			vehicleInfo.clear();
+		}
 		long currentTime = System.currentTimeMillis();
 		List<VehicleAlarmBean> alarmList = new ArrayList<VehicleAlarmBean>();
 		try {

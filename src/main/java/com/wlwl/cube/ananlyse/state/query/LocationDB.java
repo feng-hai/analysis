@@ -5,6 +5,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ import com.esotericsoftware.minlog.Log;
 import com.wlwl.cube.analyse.bean.ChargeBean;
 import com.wlwl.cube.analyse.bean.ObjectModelOfKafka;
 import com.wlwl.cube.analyse.bean.Pair;
+import com.wlwl.cube.analyse.bean.VehicleInfo;
 import com.wlwl.cube.analyse.bean.VehicleStatisticBean;
 import com.wlwl.cube.analyse.bean.VehicleStatusBean;
 import com.wlwl.cube.analyse.common.Conf;
@@ -51,17 +53,24 @@ public class LocationDB implements State {
 //	private static final String PERFIX = "DATAANALYSIS:";
 	// private Map<String, VehicleStatisticBean> lastCharges = null;
 	private long lastTime;
+	private static  long lastTimeForUpdateRedis;
+	
+	private static long lastTimeOnline;
 
 	private RedisUtils util = null;
 	//private JdbcUtils jdbcUtils = null;
-	private static final Logger log = LoggerFactory.getLogger(VehicleStatusFunction.class);
+	private static final Logger log = LoggerFactory.getLogger(LocationDB.class);
 	SimpleDateFormat DEFAULT_DATE_SIMPLEDATEFORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private Map<String, List<VehicleStatusBean>> statusData = null;
+	
+	private static Map<String,VehicleInfo> vehicleCatch=new ConcurrentHashMap<>();
 
 	public LocationDB() {
 		util = RedisSingleton.instance();
 		//jdbcUtils = SingletonJDBC.getJDBC();
 		lastTime = System.currentTimeMillis();
+		lastTimeForUpdateRedis= System.currentTimeMillis();
+		lastTimeOnline= System.currentTimeMillis();
 	}
 
 	public LocationDB(Map<String, List<VehicleStatusBean>> map) {
@@ -69,6 +78,8 @@ public class LocationDB implements State {
 		//jdbcUtils = SingletonJDBC.getJDBC();
 		this.statusData = map;
 		lastTime = System.currentTimeMillis();
+		lastTimeForUpdateRedis= System.currentTimeMillis();
+		lastTimeOnline= System.currentTimeMillis();
 	}
 
 	public void beginCommit(Long txid) {
@@ -81,6 +92,8 @@ public class LocationDB implements State {
 
 	public void setLocationsBulk(List<ObjectModelOfKafka> vehicleIds) {
 		long currentTime = System.currentTimeMillis();
+		
+		Map<String, Map<String, String>> vehicles=new ConcurrentHashMap <>();
 		for (ObjectModelOfKafka omok : vehicleIds) {
 			if (omok == null) {
 				continue;
@@ -88,17 +101,33 @@ public class LocationDB implements State {
 			// 更新车辆在线状态
 			try {
 
-				updateVehicleSatusNew(omok);
+				Map<String, Map<String, String>> temp=	updateVehicleSatusNew(omok);
+				if(temp!=null)
+				{
+					vehicles.putAll(temp);
+				}
+				
+				
+				
 				if (currentTime - lastTime > 1000 * 60 *5) {
 					this.lastTime = currentTime;
-					//updateNoOnline();
+					
 					loadData();
 				}
+				updateNoOnline();
 
 			} catch (Exception ex) {
 				log.error("错误",ex);
 			}
 		}
+		
+//		long time = System.currentTimeMillis();
+//		if(vehicles.size()>2000||time-lastTimeForUpdateRedis>10000)
+//		{
+//			lastTimeForUpdateRedis=time;
+			util.setKeys(vehicles);
+//			vehicles.clear();
+//		}
 
 		
 	}
@@ -114,28 +143,29 @@ public class LocationDB implements State {
 	 */
 	private void updateNoOnline() {
 
-		String timekey = Conf.STORM_TIMER + "status" + "ONLINETIER";
-		String timer = util.hget(timekey, Conf.ACTIVE_ONLINE_TIMER + "status");
-		if (timer != null) {
-			Date date = StateUntils.strToDate(timer);
-			if (date != null) {
-				long m = new Date().getTime() - date.getTime();
+		//String timekey = Conf.STORM_TIMER + "status" + "ONLINETIER";
+	//	String timer = util.hget(timekey, Conf.ACTIVE_ONLINE_TIMER + "status");
+	//	if (timer != null) {
+		//	Date date = StateUntils.strToDate(timer);
+			//if (date != null) {
+				long m =System.currentTimeMillis() - lastTimeOnline;
 				if (m > 1000 * 60 * 5) {
-
-					util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER + "status", StateUntils.formate(new Date()));
+					lastTimeOnline=System.currentTimeMillis() ;
+				//	util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER + "status", StateUntils.formate(new Date()));
 					// 更新数据
 					checkOnLine();
 
 				}
-			} else {
+			//} 
+	//else {
 				// checkOnLine();
-				util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER + "status", StateUntils.formate(new Date()));
-			}
+				//util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER + "status", StateUntils.formate(new Date()));
+		//	}
 
-		} else {
+		//} else {
 			// checkOnLine();
-			util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER + "status", StateUntils.formate(new Date()));
-		}
+		//	util.hset(timekey, Conf.ACTIVE_ONLINE_TIMER + "status", StateUntils.formate(new Date()));
+		//}
 
 	}
 
@@ -145,7 +175,7 @@ public class LocationDB implements State {
 	 *         返回类型 @throws
 	 */
 	public void checkOnLine() {
-
+		Map<String, Map<String, String>> vehicles=new ConcurrentHashMap <>();
 		Set<String> set = util.keys(Conf.PERFIX + "*");
 		for (String str : set) {
 			// String status = util.hget(str, Conf.ACTIVE_STATUS);
@@ -154,23 +184,32 @@ public class LocationDB implements State {
 			{
 				continue;
 			}
+			
+			Map<String, String> temp=new HashMap<>();
 			String time = util.hget(str, Conf.DATIME_RX);
-			String status = util.hget(str, Conf.ACTIVE_STATUS);
-			if (status == null || !status.equals("0")) {
+		//	String status = util.hget(str, Conf.ACTIVE_STATUS);
+		//	if (status == null || !status.equals("0")) {
 				if (time != null) {// 如果时间存在
 					if (new Date().getTime() - StateUntils.strToDate(time).getTime() > 1000 * 60 * 5) {
-						util.hset(str, Conf.ACTIVE_STATUS, "0");
+				
+						
+						//util.hset(str, Conf.ACTIVE_STATUS, "0");
+						temp.put(Conf.ACTIVE_STATUS, "0");
+						vehicles.put(str, temp);
 					//	String unid = util.hget(str, "unid");
 					//	alertEnd(unid);
 					}
 				} else {// 如果时间不存在
-					util.hset(str, Conf.ACTIVE_STATUS, "0");
+					//util.hset(str, Conf.ACTIVE_STATUS, "0");
+					temp.put(Conf.ACTIVE_STATUS, "0");
+					vehicles.put(str, temp);
 				//	String unid = util.hget(str, "unid");
 					//alertEnd(unid);
 				}
-			}
+			//}
 			// }
 		}
+		util.setKeys(vehicles);
 		set = null;
 	}
 
@@ -217,32 +256,57 @@ public class LocationDB implements State {
 		util.del(aiid_key + vehicleUnid);
 	}
 
-	private void updateVehicleSatusNew(ObjectModelOfKafka omok) {
+	private Map<String, Map<String, String>> updateVehicleSatusNew(ObjectModelOfKafka omok) {
 		
-		log.info("信息01"+JsonUtils.serialize(omok));
+		//log.info("信息01"+JsonUtils.serialize(omok));
 		if (omok.getVehicle_UNID() == null) {
-			return;
+			return null;
 		}
 		String vehicleUnid = omok.getVehicle_UNID().getValue();
 		String timekey = Conf.STORM_TIMER + "status" + "ONLINETIERDEFAULT";
 		String id = Conf.PERFIX + vehicleUnid;
 		String field = "fiber_unid";
-		String fiber_unid = util.hget(id, field);
-		String currentStatus = util.hget(id, Conf.ACTIVE_STATUS);
-		log.info("当前车辆状态："+currentStatus);
+		String fiber_unid=null ;
+		String currentStatus=null;
+		VehicleInfo vehicle=vehicleCatch.get(id);
+		if(vehicle==null)
+		{
+			vehicle=new VehicleInfo();
+			fiber_unid= util.hget(id, field);
+			currentStatus = util.hget(id, Conf.ACTIVE_STATUS);
+			vehicle.setFiberid(fiber_unid);
+			vehicle.setUnid(currentStatus);
+			vehicleCatch.put(id, vehicle);
+			
+		}else
+		{
+			fiber_unid=vehicle.getFiberid();
+			currentStatus=vehicle.getUnid();
+		}
+
+		Map<String, Map<String, String>> cMap = new HashMap<>();
+		
+		Map<String, String> pairsMap2 = new HashMap<>();
+		//log.info("当前车辆状态："+currentStatus);
 		if (currentStatus == null || (currentStatus != null && currentStatus.equals("0"))) {
-			util.hset(id, Conf.ACTIVE_STATUS, "2");
-			log.info("更新车辆状态：2");
-			return;
+			//util.hset(id, Conf.ACTIVE_STATUS, "2");
+			pairsMap2.put(Conf.ACTIVE_STATUS, "2");
+			vehicle.setUnid("2");
+			cMap.put(id, pairsMap2);
+			//log.info("更新车辆状态：2");
+			return cMap;
 		}
 		if (fiber_unid == null) {
 			System.out.println("车辆数据字典为空："+id);
-			return;
+			return null;
 		}
 		Boolean isMatch = false;
+		
+		//Map<String, String> pairsMap3 = new HashMap<>();
 		if (this.statusData.containsKey(fiber_unid)) {
 			//LOG.info("信息02"+JsonUtils.serialize(omok));
 			List<VehicleStatusBean> statusList = this.statusData.get(fiber_unid);
+			
 			for (VehicleStatusBean statusBean : statusList) {
 				String code = statusBean.getCODE();
 				Integer status = statusBean.getStatus();
@@ -258,32 +322,49 @@ public class LocationDB implements State {
 				if (isTrue) {
 					isMatch = true;
 					
+					
+					
+					pairsMap2.put( Conf.ACTIVE_STATUS, String.valueOf(status));
+					vehicle.setUnid(String.valueOf(status));
+				//	pairsMap3.put( "default", StateUntils.formate(new Date()));
+					
 					//LOG.info("信息03:"+status+JsonUtils.serialize(omok));
-					util.hset(id, Conf.ACTIVE_STATUS, String.valueOf(status));
-					util.hset(timekey, "default", StateUntils.formate(new Date()));
+					//util.hset(id, Conf.ACTIVE_STATUS, String.valueOf(status));
+					//util.hset(timekey, "default", StateUntils.formate(new Date()));
+					cMap.put(id, pairsMap2);
+					//cMap.put(timekey, pairsMap3);
 					break;
 
 				}
 
 			}
+			
+			
 		}
 		if (!isMatch)// 设置上线默认值
 		{
-			String timer = util.hget(timekey, "default");
-			if (timer != null) {
-				Date date = StateUntils.strToDate(timer);
-				if (date != null) {
-					long m = new Date().getTime() - date.getTime();
+		//	String timer = util.hget(timekey, "default");
+			//if (timer != null) {
+			//	Date date = StateUntils.strToDate(timer);
+				//if (date != null) {
+					long m = System.currentTimeMillis() - lastTimeForUpdateRedis;
 					if (m > 1000 * 60) {
-						util.hset(id, Conf.ACTIVE_STATUS, "2");
+						lastTimeForUpdateRedis= System.currentTimeMillis();
+						pairsMap2.put( Conf.ACTIVE_STATUS, "2");
+						vehicle.setUnid("2");
+						cMap.put(id, pairsMap2);
+						//util.hset(id, Conf.ACTIVE_STATUS, "2");
 						//LOG.info("信息04:2-"+JsonUtils.serialize(omok));
 						//util.hset(id, Conf.DATIME_RX, omok.getDATIME_RX());
 					}
-				}
-			} else {
-				util.hset(timekey, "default", StateUntils.formate(new Date()));
-			}
+				//}
+		//	} else {
+				//util.hset(timekey, "default", StateUntils.formate(new Date()));
+			//	pairsMap3.put( "default", StateUntils.formate(new Date()));
+				//cMap.put(timekey, pairsMap3);
+		//	}
 		}
+		return cMap;
 	}
 
 

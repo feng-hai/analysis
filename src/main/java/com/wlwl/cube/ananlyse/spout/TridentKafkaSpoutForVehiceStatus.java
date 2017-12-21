@@ -128,9 +128,6 @@ public class TridentKafkaSpoutForVehiceStatus {
 				.each(new Fields("str"), new CreateVehicleModelFunction(), new Fields("vehicle")).parallelismHint(2)
 				.each(new Fields("vehicle"), new DeviceIDFunction(), new Fields("deviceId")).parallelismHint(2)
 				.partitionBy(new Fields("deviceId")).parallelismHint(2)
-				// .each(new Fields("deviceId", "vehicle"), new
-				// VehicleStatusFunction(), new
-				// Fields("vehicleInfo")).parallelismHint(2)
 				.partitionPersist(new LocationDBFactory(statusMap), new Fields("vehicle"), new LocationUpdater())
 				.parallelismHint(10);
 
@@ -196,7 +193,7 @@ public class TridentKafkaSpoutForVehiceStatus {
 	// * 加载数据库中数据，安装数据字典存储
 	// */
 	private Map<String, List<VehicleStatusBean>> loadData() {
-		String sql = "SELECT code,option,value,VALUE_LAST ,status,REMARKS,ALARM_LEVEL,ALARM_NAME,fiber_unid  FROM  cube.PDA_CUSTOM_SETUP where type=1 and flag_del=0 order by INX desc";
+		String sql = "SELECT code,option,value,VALUE_LAST ,status,remarks,alarm_level,alarm_name,fiber_unid  FROM  cube.PDA_CUSTOM_SETUP where type=1 and flag_del=0 order by INX desc";
 		List<Object> params = new CopyOnWriteArrayList<Object>();
 		List<VehicleStatusBean> list = null;
 		JdbcUtils jdbcUtils = SingletonJDBC.getJDBC();

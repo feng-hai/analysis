@@ -28,6 +28,7 @@ public class ObjectModelOfKafka implements Serializable {
 	private Date TIMESTAMP = new Date();
 	private List<Pair> pairs = new ArrayList<Pair>();
 	private String DATIME_RX = "";
+	
 
 	/**
 	 * @return tIMESTAMP
@@ -35,6 +36,8 @@ public class ObjectModelOfKafka implements Serializable {
 	public Date getTIMESTAMP() {
 		return TIMESTAMP;
 	}
+	
+
 
 	/**
 	 * @param tIMESTAMP

@@ -347,7 +347,8 @@ public class JdbcUtils {
 			T resultObject = cls.newInstance();
 			for (int i = 0; i < cols_len; i++) {
 				String cols_name = metaData.getColumnName(i + 1);
-				Object cols_value = resultSet.getObject(cols_name);
+				System.out.println(cols_name);
+				Object cols_value = resultSet.getObject(cols_name.toLowerCase());
 				if (cols_value == null) {
 					cols_value = "";
 				}

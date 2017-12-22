@@ -94,6 +94,8 @@ public class LocationDB implements State {
 				if (currentTime - lastTime > 1000 * 60 * 5) {
 					this.lastTime = currentTime;
 					loadData();
+					//清除缓存
+					vehicleCatch.clear();
 				}
 				// updateNoOnline();
 
@@ -241,6 +243,8 @@ public class LocationDB implements State {
 	// }
 
 	private Map<String, Map<String, String>> updateVehicleSatusNew(ObjectModelOfKafka omok) {
+		Long currentTime=System.currentTimeMillis();
+	
 
 		if (omok.getVehicle_UNID() == null) {
 			return null;
@@ -257,8 +261,9 @@ public class LocationDB implements State {
 		String fiber_unid = null;
 		String currentStatus = null;
 
+		VehicleInfo vehicle = vehicleCatch.get(id);
 		if (!vehicleCatch.containsKey(id)) {
-			VehicleInfo vehicle = new VehicleInfo();
+			 vehicle = new VehicleInfo();
 			Map<String, String> values = util.hgetall(id);
 			fiber_unid = values.get(field);
 			currentStatus = values.get(Conf.ACTIVE_STATUS);
@@ -266,7 +271,7 @@ public class LocationDB implements State {
 			vehicle.setUnid(currentStatus);
 			vehicleCatch.put(id, vehicle);
 		} else {
-			VehicleInfo vehicle = vehicleCatch.get(id);
+			
 			fiber_unid = vehicle.getFiberid();
 			currentStatus = vehicle.getUnid();
 		}

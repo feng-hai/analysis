@@ -116,7 +116,7 @@ public class Conf2 {
 	public static final String FAMILY="count";
 	
 	
-	public static final String REDISURL="10.117.177.94";
+	public static final String REDISURL="10.117.17.40";
 	
 	
 	public static final String MYSQLURL="10.252.248.176:3306";//10.60.60.90:3306

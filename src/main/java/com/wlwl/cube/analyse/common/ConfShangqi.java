@@ -116,7 +116,7 @@ public class ConfShangqi {
 	public static final String FAMILY="count";
 	
 	
-	public static final String REDISURL="172.16.21.225";
+	public static final String REDISURL="172.16.21.226";
 	
 	
 	public static final String MYSQLURL="172.16.21.225:3306";//10.60.60.90:3306
